@@ -572,18 +572,6 @@ enemyList["mnemesis_2"].thinker = function(mo)
 						return newEnemyThinker(mo)
 					end
 
-table.insert(enemyList["batkan"].skills, "super pralaya")
-table.insert(enemyList["batkan"].skills, "super god hand")
-table.insert(enemyList["batkan"].skills, "super brave blade")
-table.insert(enemyList["batkan"].skills, "super psycho force")
-table.insert(enemyList["batkan"].skills, "super atomic flare")
-table.insert(enemyList["batkan"].skills, "super thunder reign")
-table.insert(enemyList["batkan"].skills, "super panta rhei")
-table.insert(enemyList["batkan"].skills, "super trisagion")
-table.insert(enemyList["batkan"].skills, "super niflheim")
-table.insert(enemyList["batkan"].skills, "super eggion")
-table.insert(enemyList["batkan"].skills, "super megagarula")
-
 attackDefs["batkan buster"].anim = function(mo, targets, hittargets, timer)
 
 			if timer == 1
