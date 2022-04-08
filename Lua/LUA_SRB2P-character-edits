@@ -1,0 +1,134 @@
+if not srb2p return end
+
+//Actually, I shouldn't mess with characters' stats, they're fine how they are (and this messes with R.E.D.'s upgrades)
+//Decided to make everyone's basehp+basesp 95
+/*charStats["blaze"].basesp = 40
+charStats["metalsonic"].basesp = 25
+charStats["knuckles"].basesp = 25
+charStats["kanade"].basehp = 75
+
+//Decided to make everyone's BST 39
+personaList["polydeuces"].agility = 8
+personaList["none_kanade"].magic = 4*/
+
+charStats["kanade"].anim_special5 = $ or {SPR_PLAY, A, TICRATE, "SPR2_HWLP"} //sepcial moment
+personaList["omoikane"].skills[14][3] = $ or "psy boost"
+table.insert(personaList["polydeuces"].skills, {"thunder reign", 92, "ziodyne"})
+table.insert(personaList["palladion"].skills, {"atomic flare", 96, "freidyne"})
+table.insert(personaList["samael"].skills, {"eggion", 88, "eigaon"})
+table.insert(personaList["io"].skills, {"megagarula", 93, "magarudyne"})
+
+local function kanadeanimfix(mo)
+	charStats["kanade"].anim_special5 = $ or {SPR_PLAY, A, TICRATE, "SPR2_HWLP"} //sepcial moment
+end
+
+addHook("ThinkFrame", kanadeanimfix)
+
+
+-- function to sort attacks
+rawset(_G, "attackSortFunc", function(a, b)
+									local t = attackDefs
+									//check if both a and b are valid skills first (even though that won't happen with this Lua added??)
+									if not (t[a] and t[b])
+										return t[a] and (not t[b]) //Put invalid skills at the bottom
+									end
+									
+									if a == "analysis" or b == "analysis"
+										return not (a == "analysis") and (b == "analysis") //I like having analysis as the last skill
+									end
+
+									-- sort by type:
+
+									if t[a].passive ~= t[b].passive
+										return (not t[a].passive) and t[b].passive
+
+									elseif t[a].type & ~ATK_PASSIVE ~= t[b].type & ~ATK_PASSIVE
+									and t[a].type & ~ATK_PASSIVE and t[b].type & ~ATK_PASSIVE
+										return (t[a].type & ~ATK_PASSIVE or 1) < (t[b].type & ~ATK_PASSIVE or 1)
+
+
+									elseif (t[a].passive and t[b].passive) 	--and t[a].passive ~= t[b].passive
+
+										if t[a].type == ATK_PASSIVE and t[b].type == ATK_PASSIVE
+											return a < b
+
+										elseif t[a].passive ~= t[b].passive
+											return t[a].passive < t[b].passive
+
+										elseif tonumber(t[a].power) and tonumber(t[b].power) and t[a].power ~= t[b].power
+											return t[a].power > t[b].power
+
+										elseif tonumber(t[a].accuracy) and tonumber(t[b].accuracy)
+											return t[a].accuracy > t[b].accuracy
+
+										else
+											return a > b
+
+										end
+
+									elseif t[a].instakill ~= t[b].instakill
+										return (not t[a].instakill) and t[b].instakill
+
+									elseif t[a].status ~= t[b].status
+										return (not t[a].status) and t[b].status
+
+									elseif tonumber(t[a].power) ~= tonumber(t[b].power)	-- or by power
+										return (t[a].power or 1) > (t[b].power or 1)
+									elseif tonumber(t[a].cost) ~= tonumber(t[b].cost)	-- or by cost...
+										return (t[a].cost or 1) < (t[b].cost or 1)
+
+									elseif t[a].status and t[b].status
+										if t[a].status ~= t[b].status
+											return t[a].status < t[b].status
+										else
+											return t[a].target < t[b].target
+										end
+
+									elseif t[a].target ~= t[b].target	-- or by target.
+										return (t[a].target or 1) < (t[b].target or 1)
+
+									else
+										return a < b
+									end
+end)
+
+rawset(_G, "PLYR_initSkills", function(mo, persona)
+	--dprint("Generating Player entity skills...")
+	mo.skills = {}
+	if server.gamemode == GM_VOIDRUN
+		return
+	end
+
+	for k,v in ipairs(persona.skills or {})
+		if v and attackDefs[v[1]] //for invalid skills
+
+			if mo.level >= v[2]
+				-- but do we have the skill we need to remove, first?
+				for rk, vv in ipairs(mo.skills)
+					if vv == v[3]
+						--dprint("Removed "..vv)
+						table.remove(mo.skills, rk)
+					end
+				end
+				-- add skill //(and remove a skill if not doing so would result in 9 skills)
+				if #mo.skills == 8
+					for i=1,8
+						if attackDefs[mo.skills[i]].type == attackDefs[v[1]].type //Look for a similar skill
+						and attackDefs[mo.skills[i]].costtype == attackDefs[v[1]].costtype
+						and attackDefs[mo.skills[i]].target == attackDefs[v[1]].target
+						and attackDefs[mo.skills[i]].passive == attackDefs[v[1]].passive
+							table.remove(mo.skills, i) //Remove a similar skill if no default skill is found
+							break
+						elseif i == 8 //No similar skill found, remove oldest skill
+							table.remove(mo.skills, 1) //If you dislike the results of this, fix your character
+						end
+					end
+				end
+				mo.skills[#mo.skills+1] = v[1]
+			end
+		end
+	end
+
+	-- autosort skills
+	table.sort(mo.skills, attackSortFunc)
+end)
