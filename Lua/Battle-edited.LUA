@@ -4904,7 +4904,12 @@ local function BTL_gameOver(pn)
 			server.P_DungeonStatus.gameoverfade = 9		-- quick hack
 			server.P_DungeonStatus.lifeexplode = 9+20
 			-- go back to the last floor where we saved
-			DNG_setFloor(server.P_DungeonStatus.savefloor)
+			//If we're at the peak, reset the map
+			if gamemap == 5
+				DNG_loadNewMap(5)
+			else
+				DNG_setFloor(server.P_DungeonStatus.savefloor)
+			end
 			DNG_logMessage(retrymsg[P_RandomRange(1, #retrymsg)])
 		end
 

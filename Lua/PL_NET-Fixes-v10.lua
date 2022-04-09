@@ -430,6 +430,8 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 	and netgame						-- nobody cares, no one will be leaving there
 	and server.P_netstat 
 	and server.P_netstat.teamlen) then return end	
+	
+	local partysize = server.plentities and server.plentities[mo.party] and max(#server.plentities[mo.party], server.P_netstat.teamlen) or server.P_netstat.teamlen
 
 	local plist = server.playerlist[mo.party]
 	local twopset
@@ -440,7 +442,7 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 		PLYR_updatecontrol(mo)				-- update our info	
 	end
 	-- !!
-	for i = 1, server.P_netstat.teamlen
+	for i = 1, partysize
 		if plist[i]
 		and not plist[i].valid
 			plist[i] = nil
@@ -451,7 +453,7 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 	-- scan for players that should be controlling us instead of whoever's in charge now
 	local seek	-- seek our index in the party
 	--for i = 1, #server.plentities[mo.party] do
-	for i = 1, server.P_netstat.teamlen do
+	for i = 1, partysize do
 		if server.plentities[mo.party][i] == mo
 			seek = i
 			break
@@ -463,11 +465,11 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 	-- okay, very, VERY special case...
 	-- if we only have 2 players, then bot #4 should be controlled by p2 and not p1, make control split even~
 
-	if seek == 4	-- last bot
+	if seek >= 4 and seek%2	-- last bot //Larger parties?
 		local count = 0
 		local lastp
 		--for k,p in ipairs(plist) do
-		for i = 1, server.P_netstat.teamlen do	-- always count with teamlen!!!
+		for i = 1, partysize do	-- always count with teamlen!!! //Hmm, or maybe plentities?
 			local p = server.playerlist[mo.party][i]
 			if p and p.valid and not p.quittime and p.P_party == mo.party
 				count = $+1
@@ -502,7 +504,7 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 		if not (plist[1] and plist[1].valid)	-- ....player 1 from our team left as well!?
 			-- remove everyone from this team; //There might still be players in the party
 			local count = 0
-			for j=1, server.P_netstat.teamlen
+			for j=2, partysize
 				if plist[j] and plist[j].valid
 					count = $+1
 				end
@@ -514,15 +516,28 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 				return
 			end
 		end
-		//If everyone is a rejoin ghost, wait for someone to join/rejoin or for the ghosts to vanish
-		local btl = server.P_BattleStatus[mo.party]
-		local count = 0
-		for j=1, server.P_netstat.teamlen
+		for j=1, partysize
 			if plist[j] and plist[j].valid and not plist[j].quittime
-				count = $+1
+				PLYR_setcontrol(mo, plist[j]) //First actual player
+				PLYR_updatecontrol(mo)
+				return
 			end
 		end
-		if not count and btl.running //Unless you're in a battle, then you all die lol
+		
+		if plist[seek] and plist[seek].valid //Just give any rejoin ghosts control, it doesn't matter
+			PLYR_setcontrol(mo, plist[seek])
+			PLYR_updatecontrol(mo)
+		else
+			for i=1, partysize
+				if plist[i] and plist[i].valid
+					PLYR_setcontrol(mo, plist[i])
+					PLYR_updatecontrol(mo)
+					break
+				end
+			end
+		end
+		local btl = server.P_BattleStatus[mo.party]		//If you're in a battle, then you all die lol
+		if btl and btl.running
 			for j=1, #server.plentities[mo.party]
 				if server.plentities[mo.party][j].hp
 					local pmo = server.plentities[mo.party][j]
@@ -540,22 +555,6 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 				end
 			end
 			mo.t_acttimer = $ and min($, 1)
-		end
-
-		//PLYR_setcontrol(mo, plist[1]) //Not always a valid player
-		for i=1, server.P_netstat.teamlen
-			if plist[i] and plist[i].valid and not plist[i].quittime
-				PLYR_setcontrol(mo, plist[i])
-				PLYR_updatecontrol(mo)
-				return
-			end
-		end
-		for i=1, server.P_netstat.teamlen
-			if plist[i] and plist[i].valid
-				PLYR_setcontrol(mo, plist[i])
-				PLYR_updatecontrol(mo)
-				break
-			end
 		end
 		dprint(header.."Reverted bot "..(seek).."'s controls to whoever can be found")
 	end
@@ -697,7 +696,8 @@ local function CustomThinkFrame()
 	if server.plentities
 		for i=1, 4
 			local plentities = server.plentities[i]
-			for j=1, server.P_netstat.teamlen
+			local partysize = plentities and max(server.P_netstat.teamlen, #plentities) or server.P_netstat.teamlen
+			for j=1, partysize
 				PLYR_checkforPlayer(plentities[j])
 			end
 		end
@@ -2161,6 +2161,7 @@ rawset(_G, "D_RunEvents", function()
 	if server.plentities and server.P_netstat and server.P_netstat.teamlen
 		for i=1, 4
 			local plentities = server.plentities[i]
+			local partysize = plentities and max(#plentities, server.P_netstat.teamlen) or server.P_netstat.teamlen
 			for j=1, server.P_netstat.teamlen
 				PLYR_checkforPlayer(plentities[j])	//And now rejoin ghosts lose control until they rejoin
 				statusConditionEffects(plentities[j]) //And doing that broke these, so I'm putting this here lol
