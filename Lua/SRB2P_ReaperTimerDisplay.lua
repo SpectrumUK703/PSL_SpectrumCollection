@@ -21,8 +21,7 @@ hud.add(function(v, p) //Most of this is copied from SRB2P's code
 
 	local bx, by = 30, 16
 	if mo and ((btl and btl.running) 
-	or (evt and evt.running)
-	or evt_buffer
+	or (evt and (evt.event or evt.running))
 	or not (renderMenus(v,mo) or R_drawShop(v, mo) or R_drawEquipLab(v, mo)))
 		by = min(-64 + menutimer*8, 16) //Slide it in when the menu is closed, or when we're in a battle or event
 	else

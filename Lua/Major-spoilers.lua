@@ -595,10 +595,10 @@ enemyList["alt"].thinker = function(mo)
 							pskills = {
 								
 								["pixie_alt"] = {
-									"super panta rhei",
-									"super thunder reign",
+									"panta rhei",
+									"thunder reign",
 									"megidolaon",
-									"super megagarula",
+									"megagarula",
 									"maziodyne",
 									"mind charge",
 									"elec amp",
@@ -622,14 +622,14 @@ enemyList["alt"].thinker = function(mo)
 									"die for me",
 									"die for me",
 									"megidolaon",
-									"super psycho force",
+									"psycho force",
 									"mapsiodyne",
-									"super trisagion",
+									"trisagion",
 									"curse amp",
 									"fire amp",
 									"psy amp",
 									"maragidyne",
-									"super eggion",
+									"eggion",
 									"curse boost",
 									"fire boost",
 									"psy boost",
@@ -644,13 +644,13 @@ enemyList["alt"].thinker = function(mo)
 									
 									"ice amp",
 									"nuke amp",
-									"super niflheim",
+									"niflheim",
 									"mabufudyne",
 									"marakunda",
 									"mamakanda",
 									"masukunda",
 									"matarunda",
-									"super atomic flare",
+									"atomic flare",
 									"mafreidyne",
 									"ice boost",
 									"nuke boost",
@@ -663,12 +663,12 @@ enemyList["alt"].thinker = function(mo)
 									
 									"mahamaon",
 									"megaton raid",
-									"super brave blade",
+									"brave blade",
 									"vicious strike",
 									"akasha arts",
 									"deathbound",
-									"super pralaya",
-									"super god hand",
+									"pralaya",
+									"god hand",
 									"myriad slashes",
 									"agneyastra",
 									"makougaon",
@@ -777,6 +777,27 @@ enemyList["alt"].thinker = function(mo)
 							if mo.knockeddown >= #enemies and not BTL_noAOAStatus(mo) and mo.hp
 								D_startEvent(btl.n, "ev_b7_all_out")
 								return attackDefs["all_out-alt"], enemies
+							end
+							local attack, targets = newEnemyThinker(mo)
+							if (targets[1].status_condition ~= COND_SUPER)
+							or attack.type == ATK_ALMIGHTY or attack.type == ATK_SUPPORT or attack.type == ATK_HEAL
+								return attack, targets //Those three types of attacks are fine
+							else
+								local check = 0
+								for i,j in pairs(targets)
+									if j.status_condition ~= COND_SUPER
+										check = j
+									end
+								end
+								if check
+									return attack, targets
+								else
+									local megipersonas = {"pixie_alt", "alice_alt", "metatron_alt"}
+									if mo.persona == "kfrost_alt"
+										alt_changePersona(mo, megipersonas[P_RandomRange(1, #megipersonas)], true)
+									end
+									return attackDefs["megidolaon"], enemies
+								end
 							end
 						end
 						
@@ -922,7 +943,7 @@ enemyList["alt"].thinker = function(mo)
 							return attackDefs["mind charge"], {mo}
 						
 						elseif calls == 4
-							if mo.name == "Re: Alt"
+							if mo.name == "Re: Alt" and not isAttackTechnical(unfortunate_victim, "panta rhei")
 								for i,j in pairs(mo.enemies)
 									if isAttackTechnical(j, "panta rhei") //Muhahaha!
 										unfortunate_victim = j
@@ -930,15 +951,43 @@ enemyList["alt"].thinker = function(mo)
 									end
 								end
 							end
+							if mo.name == "Re: Alt"
+							and unfortunate_victim.status_condition == COND_SUPER
+								return attackDefs["megidolaon"], enemies
+							end
 							return attackDefs["panta rhei"], {unfortunate_victim}
 							
 						-- Turn 2: Mabufudyne -> Vicious Strike
 						elseif calls == 5
+							if mo.name == "Re: Alt"
+								local check = 0
+								for i,j in pairs(mo.enemies)
+									if j.status_condition ~= COND_SUPER
+										check = j
+										break
+									end
+								end
+								if not check
+									return attackDefs["megidolaon"], enemies
+								end
+							end
 							alt_changePersona(mo, "kfrost_alt")
 							return attackDefs["mabufudyne"], enemies
 						
 						elseif calls == 6
 							alt_changePersona(mo, "metatron_alt")
+							if mo.name == "Re: Alt"
+								local check = 0
+								for i,j in pairs(mo.enemies)
+									if j.status_condition ~= COND_SUPER
+										check = j
+										break
+									end
+								end
+								if not check
+									return attackDefs["megidolaon"], enemies
+								end
+							end
 							return attackDefs["vicious strike"], enemies
 							
 						-- Turn 3: Metatron Mahama, Alice Mamudo... yikes!
@@ -946,6 +995,16 @@ enemyList["alt"].thinker = function(mo)
 							if mo.name ~= "Re: Alt"
 								return attackDefs["mahama"], enemies
 							else
+								local check = 0
+								for i,j in pairs(mo.enemies)
+									if j.status_condition ~= COND_SUPER
+										check = j
+										break
+									end
+								end
+								if not check
+									return attackDefs["megidolaon"], enemies
+								end
 								return attackDefs["mahamaon"], enemies
 							end
 							
@@ -954,6 +1013,16 @@ enemyList["alt"].thinker = function(mo)
 							if mo.name ~= "Re: Alt"
 								return attackDefs["mamudo"], enemies
 							else
+								local check = 0
+								for i,j in pairs(mo.enemies)
+									if j.status_condition ~= COND_SUPER
+										check = j
+										break
+									end
+								end
+								if not check
+									return attackDefs["megidolaon"], enemies
+								end
 								return attackDefs["mamudoon"], enemies
 							end
 						
@@ -964,22 +1033,50 @@ enemyList["alt"].thinker = function(mo)
 							
 						elseif calls == 10
 							if mo.name == "Re: Alt"
-								for i,j in pairs(mo.enemies)
+								for i,j in pairs(mo.enemies) and not isAttackTechnical(unfortunate_victim, "thunder reign")
 									if isAttackTechnical(j, "thunder reign") //Muhahaha!
 										unfortunate_victim = j
 										break
 									end
 								end
 							end
+							if mo.name == "Re: Alt"
+							and unfortunate_victim.status_condition == COND_SUPER
+								return attackDefs["megidolaon"], enemies
+							end
 							return attackDefs["thunder reign"], {unfortunate_victim}
 							
 						-- Turn 5: Maragidyne -> Magarudyne
 						elseif calls == 11
 							alt_changePersona(mo, "alice_alt")
+							if mo.name == "Re: Alt"
+								local check = 0
+								for i,j in pairs(mo.enemies)
+									if j.status_condition ~= COND_SUPER
+										check = j
+										break
+									end
+								end
+								if not check
+									return attackDefs["megidolaon"], enemies
+								end
+							end
 							return attackDefs["maragidyne"], enemies
 							
 						elseif calls == 12
 							alt_changePersona(mo, "pixie_alt")
+							if mo.name == "Re: Alt"
+								local check = 0
+								for i,j in pairs(mo.enemies)
+									if j.status_condition ~= COND_SUPER
+										check = j
+										break
+									end
+								end
+								if not check
+									return attackDefs["megidolaon"], enemies
+								end
+							end
 							return attackDefs["magarudyne"], enemies
 							
 						-- Turn 6: Mind Charge -> Niflheim
@@ -988,6 +1085,10 @@ enemyList["alt"].thinker = function(mo)
 							return attackDefs["mind charge"], {mo}
 							
 						elseif calls == 14
+							if mo.name == "Re: Alt"
+							and unfortunate_victim.status_condition == COND_SUPER
+								return attackDefs["megidolaon"], enemies
+							end
 							alt_changePersona(mo, "kfrost_alt")
 							return attackDefs["niflheim"], {unfortunate_victim}
 							
@@ -995,7 +1096,7 @@ enemyList["alt"].thinker = function(mo)
 						elseif calls == 15
 							//Actually, this was just cruel
 							//Which is just what is needed
-							if mo.name == "Re: Alt"
+							if mo.name == "Re: Alt" and not isAttackTechnical(unfortunate_victim, "trisagion")
 								for i,j in pairs(mo.enemies)
 									if isAttackTechnical(j, "trisagion") //Muhahaha!
 										unfortunate_victim = j
@@ -1004,10 +1105,14 @@ enemyList["alt"].thinker = function(mo)
 								end
 							end
 							alt_changePersona(mo, "alice_alt")
+							if mo.name == "Re: Alt"
+							and unfortunate_victim.status_condition == COND_SUPER
+								return attackDefs["megidolaon"], enemies
+							end
 							return attackDefs["trisagion"], {unfortunate_victim}
 							
 						elseif calls == 16
-							if mo.name == "Re: Alt"
+							if mo.name == "Re: Alt" and not isAttackTechnical(unfortunate_victim, "panta rhei")
 								for i,j in pairs(mo.enemies)
 									if isAttackTechnical(j, "panta rhei") //Muhahaha!
 										unfortunate_victim = j
@@ -1016,6 +1121,10 @@ enemyList["alt"].thinker = function(mo)
 								end
 							end
 							alt_changePersona(mo, "pixie_alt")
+							if mo.name == "Re: Alt"
+							and unfortunate_victim.status_condition == COND_SUPER
+								return attackDefs["megidolaon"], enemies
+							end
 							return attackDefs["panta rhei"], {unfortunate_victim}
 							
 						-- Turn 8: Dekaja, Dekunda
@@ -1044,10 +1153,34 @@ enemyList["alt"].thinker = function(mo)
 							
 						elseif calls == 4
 							alt_changePersona(mo, "metatron_alt", true) //Pinch phase skills if she gets one mores
+							if mo.name == "Re: Alt"
+								local check = 0
+								for i,j in pairs(mo.enemies)
+									if j.status_condition ~= COND_SUPER
+										check = j
+										break
+									end
+								end
+								if not check
+									return attackDefs["megidolaon"], enemies
+								end
+							end
 							return attackDefs["blade of fury"], enemies
 						
 						-- Turn 2: Mahamaon, Mamudoon
 						elseif calls == 5
+							if mo.name == "Re: Alt"
+								local check = 0
+								for i,j in pairs(mo.enemies)
+									if j.status_condition ~= COND_SUPER
+										check = j
+										break
+									end
+								end
+								if not check
+									return attackDefs["megidolaon"], enemies
+								end
+							end
 							return attackDefs["mahamaon"], enemies
 							
 						elseif calls == 6
@@ -1055,6 +1188,16 @@ enemyList["alt"].thinker = function(mo)
 							if mo.name ~= "Re: Alt"
 								return attackDefs["mamudoon"], enemies
 							else
+								local check = 0
+								for i,j in pairs(mo.enemies)
+									if j.status_condition ~= COND_SUPER
+										check = j
+										break
+									end
+								end
+								if not check
+									return attackDefs["megidolaon"], enemies
+								end
 								return attackDefs["die for me"], enemies	//The funny skill!
 							end
 							
@@ -1064,8 +1207,31 @@ enemyList["alt"].thinker = function(mo)
 							if (calls%2) or mo.name == "Re: Alt" //Change every thinkercall lol
 								local personas = {"pixie_alt", "alice_alt", "kfrost_alt", "metatron_alt"}
 								alt_changePersona(mo, personas[P_RandomRange(1, #personas)], true)	-- use pinch phase moves
-							end	
-							return newEnemyThinker(mo)								
+							end
+							if mo.name == "Re: Alt"
+								local attack, targets = newEnemyThinker(mo)
+								if (targets[1].status_condition ~= COND_SUPER)
+								or attack.type == ATK_ALMIGHTY or attack.type == ATK_SUPPORT or attack.type == ATK_HEAL
+									return attack, targets //Those three types of attacks are fine
+								else
+									local check = 0
+									for i,j in pairs(targets)
+										if j.status_condition ~= COND_SUPER
+											check = j
+										end
+									end
+									if check
+										return attack, targets
+									else
+										local megipersonas = {"pixie_alt", "alice_alt", "metatron_alt"}
+										if mo.persona == "kfrost_alt"
+											alt_changePersona(mo, megipersonas[P_RandomRange(1, #megipersonas)], true)
+										end
+										return attackDefs["megidolaon"], enemies
+									end
+								end
+							end
+							return newEnemyThinker(mo)
 						
 						end	
 					end

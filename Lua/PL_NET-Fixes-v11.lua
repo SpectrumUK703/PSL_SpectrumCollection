@@ -288,43 +288,31 @@ rawset(_G, "NET_Synch", function()
 	//I wonder if this will cause any issues?
 	if type(consoleplayer) == "userdata" and consoleplayer and consoleplayer.valid
 		local btl
-		if server.P_BattleStatus
-			btl = server.P_BattleStatus[consoleplayer.P_party]
-		end
+		btl = server.P_BattleStatus and server.P_BattleStatus[consoleplayer.P_party]
 		if not S_MusicPlaying()
 			if gamemap == 2
-				local block
-				if server and server.P_DungeonStatus and server.P_DungeonStatus.floor
-					block = DNG_returnBlock(server.P_DungeonStatus.floor)
-				end
-				if block
-					COM_BufInsertText(consoleplayer, "tunes "..DNG_getTartarusMusic(block))
-				end
+				local block = server and server.P_DungeonStatus and server.P_DungeonStatus.floor and DNG_returnBlock(server.P_DungeonStatus.floor)
+				COM_BufInsertText(consoleplayer, "tunes "..DNG_getTartarusMusic(block))
 				if server.blocktrans
 					S_ChangeMusic("BLCKT", false, consoleplayer, nil, nil, MUSICRATE/2)
 				end
-				if btl and btl.hudtimer and btl.hudtimer.endb and btl.hudtimer.endb <= 10
+				if btl and btl.hudtimer and btl.hudtimer.endb
 					S_ChangeMusic(MUS_PlayRandomBattleMusic("mus_battle_results"), nil, consoleplayer)
 				end
-			end
-			if gamemap == 3
+			elseif gamemap == 3
 				local music = server.P_BattleStatus[1].music or "BATL1"
-				if music
-					S_ChangeMusic(music, true, consoleplayer)
-				end
-			end
-			if gamemap == 4
-				if server.cdungeon
-					COM_BufInsertText(consoleplayer, "tunes "..server.cdungeon.dungeonmusic)
-				end
-				if btl and btl.hudtimer and btl.hudtimer.endb and btl.hudtimer.endb <= 10
+				COM_BufInsertText(consoleplayer, "tunes "..music)
+			elseif gamemap == 4
+				local cdungeonmusic = server.cdungeon and server.cdungeon.dungeonmusic
+				COM_BufInsertText(consoleplayer, "tunes "..cdungeonmusic)
+				if btl and btl.hudtimer and btl.hudtimer.endb
 					S_ChangeMusic(MUS_PlayRandomBattleMusic("mus_battle_results"), nil, consoleplayer)
 				end
 			end
 		end
-		if server.gamemode ~= GM_VOIDRUN and btl and btl.running
-			local music = btl.music or "BATL1"
-			if music
+		if server.gamemode ~= GM_VOIDRUN and (gamemap == 5 or not S_MusicPlaying())
+			if btl and btl.running
+				local music = btl.music or "BATL1"
 				S_ChangeMusic(music, true, consoleplayer)
 			end
 		end
@@ -370,8 +358,10 @@ local function PLYR_removeTeam(pn)
 
 	//#server.playerlist[pn] can sometimes be 0 when the party isn't empty lol
 	//if #server.playerlist[pn]
+	local plentities = server.plentities[pn]
+	local partysize = #plentities
 	local count = 0
-	for j=1, server.P_netstat.teamlen
+	for j=1, partysize
 		if server.playerlist[pn][j] and server.playerlist[pn][j].valid
 			count = $+1
 		end
@@ -402,7 +392,7 @@ local function PLYR_removeTeam(pn)
 	local num = 0
 	for i=1, 4
 		local plist = server.playerlist[i]
-		for j=1, server.P_netstat.teamlen
+		for j=1, partysize
 			if plist[j] and plist[j].valid
 				num = $+1
 				break //There's a player in this party, on to the next one
@@ -411,8 +401,8 @@ local function PLYR_removeTeam(pn)
 	end
 
 	if num
-		if server.P_netstat.teamlen
-			COM_BufInsertText(server, "maxplayers "..(num*server.P_netstat.teamlen))
+		if partysize
+			COM_BufInsertText(server, "maxplayers "..(num*partysize))
 		else
 			COM_BufInsertText(server, "maxplayers "..(num*4))
 		end
@@ -422,16 +412,34 @@ local function PLYR_removeTeam(pn)
 	dprint("Removed team "..pn)
 end
 
-//rawset(_G, "PLYR_checkforPlayer", function(mo)
+rawset(_G, "PLYR_updatecontrol", function(mo)
+	mo.savecontrol = mo.control.name
+	mo.inputs = mo.control.mo.P_inputs
+
+	--if (netgame)
+		if mo.control.maincontrol == mo	-- not the best of checks
+			mo.name = mo.savecontrol
+			if mo.control.mo.skin ~= mo.skin
+				R_SetPlayerSkin(mo.control, mo.skin)	-- make sure our real player looks like the character they chose.
+				COM_BufInsertText(mo.control, "skin "..mo.skin) //So the game doesn't try changing them back whenever they change name
+			end	-- don't do it every frame
+			mo.color = mo.control.mo.color
+			mo.displaycontrolname = nil
+		else
+			mo.displaycontrolname = true
+		end
+	--end
+end)
+
 local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' is still in the game, update our controller / data accordingly.
 	if not (mo and mo.valid			-- you never know.
 	and mo.plyr						-- we're not a player, so it doesn't matter lol
 	and mo.control					-- no one was controlling us to begin with.
 	and netgame						-- nobody cares, no one will be leaving there
-	and server.P_netstat 
-	and server.P_netstat.teamlen) then return end	
+	and server.plentities 
+	and server.plentities[mo.party]) then return end	
 	
-	local partysize = server.plentities and server.plentities[mo.party] and max(#server.plentities[mo.party], server.P_netstat.teamlen) or server.P_netstat.teamlen
+	local partysize = #server.plentities[mo.party]
 
 	local plist = server.playerlist[mo.party]
 	local twopset
@@ -439,14 +447,14 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 	local header = "PN "..mo.party..": "
 
 	if mo.control and mo.control.valid and not mo.control.quittime //rejointimeout ghost
-		PLYR_updatecontrol(mo)				-- update our info	
-	end
-	-- !!
-	for i = 1, partysize
-		if plist[i]
-		and not plist[i].valid
-			plist[i] = nil
-			dprint(header.."Removed index "..i.." from partytable")
+		PLYR_updatecontrol(mo)				-- update our info
+	else	-- !!
+		for i = 1, partysize
+			if plist[i] 
+			and not plist[i].valid
+				plist[i] = nil
+				dprint(header.."Removed index "..i.." from partytable")
+			end
 		end
 	end
 
@@ -455,6 +463,11 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 	--for i = 1, #server.plentities[mo.party] do
 	for i = 1, partysize do
 		if server.plentities[mo.party][i] == mo
+			if plist[i]
+			and not plist[i].valid
+				plist[i] = nil
+				dprint(header.."Removed index "..i.." from partytable")
+			end
 			seek = i
 			break
 		end
@@ -464,38 +477,61 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 
 	-- okay, very, VERY special case...
 	-- if we only have 2 players, then bot #4 should be controlled by p2 and not p1, make control split even~
+	//Players 1 and/or 2 could easily not exist, you could have players 1 and 3, 1 and 4, 2 and 3, 2 and 4, or 3 and 4
 
-	if seek >= 4 and seek%2	-- last bot //Larger parties?
-		local count = 0
-		local lastp
-		--for k,p in ipairs(plist) do
-		for i = 1, partysize do	-- always count with teamlen!!! //Hmm, or maybe plentities?
-			local p = server.playerlist[mo.party][i]
-			if p and p.valid and not p.quittime and p.P_party == mo.party
-				count = $+1
-				lastp = p
+	local count = 0
+	local botcount = 0
+	local firstp
+	local firstpindex
+	local lastp
+	local lastpindex
+	local oddbot
+	local evenbot
+	--for k,p in ipairs(plist) do
+	for i = 1, partysize do	-- always count with teamlen!!! //Hmm, or maybe plentities?
+		local p = server.playerlist[mo.party][i]
+		if p and p.valid and not p.quittime and p.P_party == mo.party
+			count = $+1
+			firstp = $ or p
+			firstpindex = $ or i
+			lastp = p
+			lastpindex = i
+		end
+	end
+
+	if count == 2
+		twopset = true
+	end
+
+	if twopset	-- exactly 2 players;
+		//Are we an odd or even bot?
+		for i = 1, partysize do
+			local pmo = server.plentities[mo.party][i]
+			if pmo and i ~= firstpindex and i ~= lastpindex
+				botcount = $+1
+				if mo == pmo
+					if (botcount%2)
+						oddbot = true
+					else
+						evenbot = true
+					end
+					break
+				end
 			end
 		end
-
-		if count == 2
-			twopset = true
-		end
-
-		if count == 2	-- exactly 2 players;
-		and mo.control ~= lastp
-			-- give our controls to this 2nd player
+		//Wait for the players to first have their maincontrol, so they have the right character outside of battles
+		if oddbot and mo.control ~= firstp and firstp.maincontrol
+			PLYR_setcontrol(mo, firstp)
+		elseif evenbot and mo.control ~= lastp and lastp.maincontrol
 			PLYR_setcontrol(mo, lastp)
-			PLYR_updatecontrol(mo)
-			dprint(header.."2PSET: Updated bot "..(seek).."'s controls to "..lastp.name)
 		end
 	end
 
 	if plist[seek] and plist[seek].valid and not plist[seek].quittime and (not mo.control or not mo.control.valid or mo.control.quittime or mo.control.maincontrol ~= mo)
-	and not twopset
+	//and not twopset
 		dprint(header.."Updated bot "..(seek).."'s controls to "..plist[seek].name)
 		--mo.control = players[seek]
 		PLYR_setcontrol(mo, plist[seek])
-		PLYR_updatecontrol(mo)
 	end
 
 	if not mo.control.valid or mo.control.quittime					-- mysterious!
@@ -519,19 +555,16 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 		for j=1, partysize
 			if plist[j] and plist[j].valid and not plist[j].quittime
 				PLYR_setcontrol(mo, plist[j]) //First actual player
-				PLYR_updatecontrol(mo)
 				return
 			end
 		end
 		
 		if plist[seek] and plist[seek].valid //Just give any rejoin ghosts control, it doesn't matter
 			PLYR_setcontrol(mo, plist[seek])
-			PLYR_updatecontrol(mo)
 		else
 			for i=1, partysize
 				if plist[i] and plist[i].valid
 					PLYR_setcontrol(mo, plist[i])
-					PLYR_updatecontrol(mo)
 					break
 				end
 			end
@@ -568,13 +601,14 @@ local function PLYR_checkjoincontrol(p)
 	or p.P_party return end			-- player shouldn't have had respawned in the first goddamn place.
 
 	-- check which party has the least players:
-	local leastplayers = server.P_netstat.teamlen+1
+	local spacesfree = 0
 	local partytojoin = 0
 	local nameindex	-- if we find a bot with our exact name (rejoining?)
 
 	for i = 1, 4
 		local pa = server.playerlist[i]
 		local plentities = server.plentities[i] //Using server.P_netstat.teamlen messes with boss mode
+		local partysize = #plentities
 
 		/*if not #pa	-- this party has NO players. //Maybe not?
 		or #pa >= server.P_netstat.teamlen	-- full
@@ -582,17 +616,17 @@ local function PLYR_checkjoincontrol(p)
 		end*/
 		
 		local count = 0
-		for j = 1, #plentities
-			if pa[j]
+		for j = 1, partysize
+			if pa[j] and pa[j].valid
 				count = $+1
 			end
 		end
-		if not count //empty
-		or count >= #plentities //full, really
+		if not count //empty, really
+		or count >= partysize //full
 			continue
 		end
 
-		for j = 1, #plentities do
+		for j = 1, partysize do
 
 			-- scan for the actual bot team, if they have a bot with YOUR player name, it means you're rejoining
 			if server.plentities[i][j]
@@ -600,14 +634,15 @@ local function PLYR_checkjoincontrol(p)
 				-- it's impossible for 2 players to have the same name, so we don't need to check for that.
 				partytojoin = i
 				nameindex = j
-				break //No point checking the other parties
+				break //No point checking the other players
 			end
 
 		end
+		if nameindex then break end //No point checking the other parties
 
-		if count < leastplayers
+		if (partysize - count) > spacesfree
 			partytojoin = i
-			leastplayers = count
+			spacesfree = partysize - count
 		end
 	end
 
@@ -617,8 +652,9 @@ local function PLYR_checkjoincontrol(p)
 		-- if anyone from that party is inside a battle's plist, add us to it as well...!
 		local pa = server.playerlist[partytojoin]
 		local plentities = server.plentities[partytojoin]
-		for i=1, #plentities
-			if pa[i] and pa[i].control and pa[i].control.battlen
+		local partysize = #plentities
+		for i=1, partysize
+			if pa[i] and pa[i].valid and pa[i].control and pa[i].control.valid and pa[i].control.battlen
 			and server.P_BattleStatus[pa[i].control.battlen].running
 				table.insert(server.P_BattleStatus[pa[i].control.battlen].plist, p)
 				dprint("Affected "..p.name.." to running battle "..pa[i].control.battlen)
@@ -628,8 +664,8 @@ local function PLYR_checkjoincontrol(p)
 
 		-- on the player list we just joined, check if the boss was cleared to give ourselevs that flag as well:
 		-- (otherwise we'd be able to trigger the boss as well... oops?)
-		for i=1, #plentities
-			if pa[i] and pa[i].mo and pa[i].mo.eventclear
+		for i=1, partysize
+			if pa[i] and pa[i].valid and pa[i].mo and pa[i].mo.valid and pa[i].mo.eventclear
 				p.mo.eventclear = true
 				break
 			end
@@ -640,14 +676,14 @@ local function PLYR_checkjoincontrol(p)
 		if nameindex	-- I got somewhere to be!
 			-- iterate table backwards and move everyone from that spot and after to the back
 			//First see if we can just join in the slot without doing that
-			local j = #plentities
+			local j = partysize
 			local pa = server.playerlist[partytojoin]
-			if not pa[nameindex]
+			if not (pa[nameindex] and pa[nameindex].valid)
 				pa[nameindex] = p
 			else
 
 				while j > nameindex
-					if j < #plentities or not pa[j]
+					if j < partysize or not pa[j]
 						pa[j] = pa[j-1]
 					end
 					j = $-1
@@ -657,8 +693,8 @@ local function PLYR_checkjoincontrol(p)
 
 		else	-- take the first free spot
 		
-			for i = 1, #plentities
-				if not server.playerlist[partytojoin][i]
+			for i = 1, partysize
+				if not (server.playerlist[partytojoin][i] and server.playerlist[partytojoin][i].valid)
 					server.playerlist[partytojoin][i] = p
 
 					return true
@@ -677,6 +713,7 @@ local function CustomThinkFrame()
 	if gamemap == 1 then return end
 	for p in players.iterate do
 		if not (p.mo and p.mo.valid) then continue end
+
 		PLYR_checkjoincontrol(p)
 		local mo = p.mo
 		if p.P_party
@@ -685,8 +722,7 @@ local function CustomThinkFrame()
 			if mo.spr_nfloor
 			and not ((mo.flags2 & MF2_DONTDRAW) and (p.pflags & PF_GODMODE))
 			and not (btl and btl.running)
-			and not (evt and evt.running)
-			and not evt_buffer
+			and not (evt and (evt.event or evt.running))
 			and not (renderMenus(v,mo) or R_drawShop(v, mo) or R_drawEquipLab(v, mo))
 				PLAY_move(p)
 				mo.spr_nfloor = nil
@@ -696,7 +732,7 @@ local function CustomThinkFrame()
 	if server.plentities
 		for i=1, 4
 			local plentities = server.plentities[i]
-			local partysize = plentities and max(server.P_netstat.teamlen, #plentities) or server.P_netstat.teamlen
+			local partysize = #plentities
 			for j=1, partysize
 				PLYR_checkforPlayer(plentities[j])
 			end
@@ -705,6 +741,10 @@ local function CustomThinkFrame()
 end
 
 addHook("PreThinkFrame", CustomThinkFrame)
+
+rawset(_G, "NET_isset", function()
+	return server and server.plentities and #server.plentities and server.skinlist and server.P_netstat and server.P_netstat.ready and not server.P_netstat.running //or not netgame
+end)
 
 //Edited from Event_Handler.lua (fixing the Lua warnings in the console seemed to fix the PVP bug?)
 -- always make this run in places where events should be able to happen.
@@ -2153,41 +2193,118 @@ local function statusConditionEffects(mo)	-- the little animations over the enem
 	end
 end
 
-//Okay, now I'm just putting code where it doesn't belong for the result I want
-rawset(_G, "D_RunEvents", function()
+rawset(_G, "DNG_Thinker", function()
+
 	if not server return end
-	
-	//I know, this doesn't belong here, but I noticed this function was run in the game's ThinkFrame before DNG_Thinker() and BTL_Thinker()
-	if server.plentities and server.P_netstat and server.P_netstat.teamlen
+
+	if server.entrycard
+		server.entrytime = $-1
+		if server.P_DungeonStatus.gameoverfade
+			server.P_DungeonStatus.gameoverfade = $-1
+		end
+		if server.P_DungeonStatus.lifeexplode
+			if server.P_DungeonStatus.lifeexplode == 20
+			and server.P_BattleStatus and server.P_BattleStatus.lives and server.P_BattleStatus.lives >= 0
+				S_StartSound(nil, sfx_mchurt)
+			end
+			server.P_DungeonStatus.lifeexplode = $-1
+		end
+
+		if not server.entrytime
+			server.entrycard = nil
+			server.entrytime = nil
+		end
+	end
+
+	if NET_running() return end	-- don't run anything during character selection
+
+	if not server.P_BattleStatus return end
+
+	if gamemap == srb2p.tartarus_play
+	or server.gamemode == GM_VOIDRUN
+		for i = 1, 4
+			if server.P_BattleStatus[i].battlestate ~= BS_MPFINISH
+				server.P_BattleStatus[i].netstats.time = $+1
+			end
+		end
+	end
+
+	//There's stuff I want run around this point
+	if netgame and server.plentities and server.P_netstat and server.P_netstat.teamlen
 		for i=1, 4
 			local plentities = server.plentities[i]
-			local partysize = plentities and max(#plentities, server.P_netstat.teamlen) or server.P_netstat.teamlen
-			for j=1, server.P_netstat.teamlen
+			local partysize = #plentities
+			for j=1, partysize
 				PLYR_checkforPlayer(plentities[j])	//And now rejoin ghosts lose control until they rejoin
 				statusConditionEffects(plentities[j]) //And doing that broke these, so I'm putting this here lol
 			end
 		end
 	end
-
-	-- loading an event frame 1 of any map would actually crash, so buffer it and start it whenever we can!
-	-- besides, we need to wait for the end of the potential title card before we do anything
-	if evt_buffer
-	and server.P_DialogueStatus
-	and server.entrytime
-	and (server.entrytime < TICRATE/2 + 10)
-		for i = 1, 4
-			if evt_buffer[i]
-				D_startEvent(i, evt_buffer[i][1], evt_buffer[i][2])
-			end	
-		end	
-		evt_buffer = nil
+	-- menus & shops:
+	for p in players.iterate do
+		if p.maincontrol and p.maincontrol.valid
+			if server.P_BattleStatus[p.maincontrol.battlen] and server.P_BattleStatus[p.maincontrol.battlen].running continue end	-- nope
+		end
+		local mo = p.mo
+		if not mo continue end
+		if DNG_handleShop(mo) continue end		-- in shop, don't open the menus in that case
+		if DNG_handleEquipLab(mo) continue end	-- in equip lab, don't open menu either
+		D_HandleMenu(mo)	-- let menus open even without net
 	end
 
-	if not server.P_BattleStatus return end
-	for i = 1, 4
-		local btl = server.P_BattleStatus[i]	-- Assumption: No multiplayer cutscenes
-		-- always run events, unless we're in battle in which case we let the battle handler take care of it.
-		if btl and btl.running return end
-		D_eventHandler(i)
+	for p in players.iterate do
+		local btl = server.P_BattleStatus
+		if btl and p.P_party
+			btl = btl[p.P_party]
+			if btl.running continue end
+		end
+
+		DNG_HandleAbilities(p, true)
+	end
+
+	if not NET_isset() return end	-- wait until we're finished setting up our team in MP
+
+	SRB2P_runHook("DungeonThinker", battle)
+
+	if server.entrytime
+
+		-- voidrun hack
+		if server.gamemode == GM_VOIDRUN
+		and server.P_DungeonStatus.VR_type == VC_REPEL
+		and server.entrytime == TICRATE/2
+		and server.P_DungeonStatus.VR_timer ~= nil
+
+			local bwaves = {}
+			server.P_DungeonStatus.VR_target = 0
+
+			for i = 1, 3 do
+				bwaves[i] = server.waves[P_RandomRange(1, #server.waves)]
+				server.P_DungeonStatus.VR_target = $ + #bwaves[i]
+			end
+
+			BTL_start(1, bwaves[1])
+			server.P_BattleStatus[1].storedwaves = bwaves
+		end
+		D_voidRun()
+
+		return
+	else
+
+		D_tartarusCrawler()
+		if server.gamemode == GM_VOIDRUN
+			D_voidRun()
+			return
+		end
+
+		if not mapheaderinfo[gamemap].tartarus
+		and not server.cdungeon
+			for p in players.iterate do
+
+				if not p.mo or not p.mo.valid continue end
+
+				if D_ReadyBattle(p) continue end
+
+			end
+		end
 	end
 end)
