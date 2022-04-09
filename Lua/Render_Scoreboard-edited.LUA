@@ -1,7 +1,7 @@
 hud.disable("rankings")
 
 local function drawPlayerInfo(v, p, showhp, ypos)
-	if not p.mo return end
+	if not (p.valid and p.mo) return end
 	local ico = charStats[p.mo.skin] and charStats[p.mo.skin].icon or charStats["sonic"].icon //If the character doesn't have SRB2P support, use Sonic's icon
 			
 	-- get ping

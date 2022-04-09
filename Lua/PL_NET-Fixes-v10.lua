@@ -437,14 +437,14 @@ local function PLYR_checkforPlayer(mo)	-- check if whoever is controlling 'mo' i
 	local header = "PN "..mo.party..": "
 
 	if mo.control and mo.control.valid and not mo.control.quittime //rejointimeout ghost
-		PLYR_updatecontrol(mo)				-- update our info
-	else	-- !!
-		for i = 1, server.P_netstat.teamlen
-			if plist[i]
-			and not plist[i].valid
-				plist[i] = nil
-				dprint(header.."Removed index "..i.." from partytable")
-			end
+		PLYR_updatecontrol(mo)				-- update our info	
+	end
+	-- !!
+	for i = 1, server.P_netstat.teamlen
+		if plist[i]
+		and not plist[i].valid
+			plist[i] = nil
+			dprint(header.."Removed index "..i.." from partytable")
 		end
 	end
 
@@ -679,10 +679,18 @@ local function CustomThinkFrame()
 	for p in players.iterate do
 		if not (p.mo and p.mo.valid) then continue end
 		PLYR_checkjoincontrol(p)
-		for p2 in players.iterate
-			if p2.mo and p2.mo.valid and p2.P_party == p.P_party and p2.mo.d_f12text and server.map[#p2.mo.subsector.sector+1] == 5 and server.map[#p.mo.subsector.sector+1] ~= 5
-				P_TeleportMove(p.mo, p2.mo.x, p2.mo.y, p2.mo.z)
-				break
+		local mo = p.mo
+		if p.P_party
+			local btl = server.P_BattleStatus[p.P_party]
+			local evt = server.P_DialogueStatus and server.P_DialogueStatus[p.P_party]
+			if mo.spr_nfloor
+			and not ((mo.flags2 & MF2_DONTDRAW) and (p.pflags & PF_GODMODE))
+			and not (btl and btl.running)
+			and not (evt and evt.running)
+			and not evt_buffer
+			and not (renderMenus(v,mo) or R_drawShop(v, mo) or R_drawEquipLab(v, mo))
+				PLAY_move(p)
+				mo.spr_nfloor = nil
 			end
 		end
 	end
@@ -2155,7 +2163,7 @@ rawset(_G, "D_RunEvents", function()
 			local plentities = server.plentities[i]
 			for j=1, server.P_netstat.teamlen
 				PLYR_checkforPlayer(plentities[j])	//And now rejoin ghosts lose control until they rejoin
-				statusConditionEffects(plentities[j])
+				statusConditionEffects(plentities[j]) //And doing that broke these, so I'm putting this here lol
 			end
 		end
 	end

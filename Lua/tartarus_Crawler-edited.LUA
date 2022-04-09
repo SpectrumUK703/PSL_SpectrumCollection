@@ -489,7 +489,7 @@ rawset(_G, "D_tartarusCrawler", function()
 				if not mo2 continue end
 				
 				//Just in case, because of what I'm doing with p.quittime
-				if server.map[#p2.mo.subsector.sector+1] == 5 and server.map[#p.mo.subsector.sector+1] ~= 5
+				if p.quittime and server.map[#p2.mo.subsector.sector+1] == 5 and server.map[#p.mo.subsector.sector+1] ~= 5
 					P_TeleportMove(p.mo, p2.mo.x, p2.mo.y, p2.mo.z)
 				end
 
