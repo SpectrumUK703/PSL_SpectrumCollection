@@ -2232,14 +2232,18 @@ rawset(_G, "DNG_Thinker", function()
 	//There's stuff I want run around this point
 	if netgame and server.plentities and server.P_netstat and server.P_netstat.teamlen
 		for i=1, 4
+			local plist = server.playerlist[i]
 			local plentities = server.plentities[i]
 			local partysize = #plentities
 			for j=1, partysize
-				PLYR_checkforPlayer(plentities[j])	//And now rejoin ghosts lose control until they rejoin
-				statusConditionEffects(plentities[j]) //And doing that broke these, so I'm putting this here lol
+				if not (plist[j] and plist[j].valid and not plist[j].quittime) //Only has to run for bots and ghosts
+					PLYR_checkforPlayer(plentities[j])	//And now rejoin ghosts lose control until they rejoin
+					statusConditionEffects(plentities[j]) //And doing that broke these, so I'm putting this here lol
+				end
 			end
 		end
 	end
+
 	-- menus & shops:
 	for p in players.iterate do
 		if p.maincontrol and p.maincontrol.valid
