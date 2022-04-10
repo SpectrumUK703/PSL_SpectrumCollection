@@ -287,44 +287,52 @@ rawset(_G, "NET_Synch", function()
 	
 	//I wonder if this will cause any issues?
 	if type(consoleplayer) == "userdata" and consoleplayer and consoleplayer.valid
-		local btl
-		btl = server.P_BattleStatus and server.P_BattleStatus[consoleplayer.P_party]
+		local btl = server.P_BattleStatus and server.P_BattleStatus[consoleplayer.P_party]
+		local dng = server.P_DungeonStatus
 		if not S_MusicPlaying()
 			if gamemap == 2
-				local block = server and server.P_DungeonStatus and server.P_DungeonStatus.floor and DNG_returnBlock(server.P_DungeonStatus.floor)
+				local block = server and dng and dng.floor and DNG_returnBlock(dng.floor)
 				COM_BufInsertText(consoleplayer, "tunes "..DNG_getTartarusMusic(block))
 				if server.blocktrans
 					S_ChangeMusic("BLCKT", false, consoleplayer, nil, nil, MUSICRATE/2)
 				end
-				if btl and btl.hudtimer and btl.hudtimer.endb
-					S_ChangeMusic(MUS_PlayRandomBattleMusic("mus_battle_results"), nil, consoleplayer)
-				end
-			elseif gamemap == 3
-				local music = server.P_BattleStatus[1].music or "BATL1"
-				COM_BufInsertText(consoleplayer, "tunes "..music)
 			elseif gamemap == 4
 				local cdungeonmusic = server.cdungeon and server.cdungeon.dungeonmusic
 				COM_BufInsertText(consoleplayer, "tunes "..cdungeonmusic)
-				if btl and btl.hudtimer and btl.hudtimer.endb
-					S_ChangeMusic(MUS_PlayRandomBattleMusic("mus_battle_results"), nil, consoleplayer)
-				end
 			end
 		end
-		if server.gamemode ~= GM_VOIDRUN and (gamemap == 5 or not S_MusicPlaying())
+		if server.gamemode ~= GM_VOIDRUN
 			if btl and btl.running
-				local music = btl.music or "BATL1"
-				S_ChangeMusic(music, true, consoleplayer)
+				if gamemap == 3 or gamemap == 5
+					local music = server.P_BattleStatus[1].music or "BATL1"
+					COM_BufInsertText(consoleplayer, "tunes "..music)
+				else
+					if btl.shufflestatus or btl.r_exp or btl.r_levelupqueue or btl.r_numplayers
+						S_ChangeMusic(btl.savemusic or MUS_PlayRandomBattleMusic("mus_battle_results"), nil, consoleplayer)
+					else
+						local music = btl.music or "BATL1"
+						S_ChangeMusic(music, true, consoleplayer)
+					end
+				end
+			elseif server.reaper and server.reaper.valid
+				S_ChangeMusic("REAPER", true, p)
+			elseif consoleplayer.mo and consoleplayer.mo.valid 
+			and ((consoleplayer.mo.equiplab and consoleplayer.mo.equiplab.using)
+			or (consoleplayer.mo.shop and consoleplayer.mo.shop.shopping))
+				S_ChangeMusic("SHOP", true, consoleplayer, nil, nil, 400)
 			end
-		end
-		if server.gamemode == GM_VOIDRUN
-		and server.P_DungeonStatus.VR_timer
-			local challengemus = (((server.P_DungeonStatus.VR_challenge-1)/3) +1 )%5
-			if not (challengemus%5)
-				challengemus = 5
+		else
+			if dng.VR_challenge%3 == 0
+				COM_BufInsertText(consoleplayer, "tunes SHOP")
+			elseif dng.VR_timer
+				local challengemus = (((dng.VR_challenge-1)/3) +1 )%5
+				if not (challengemus%5)
+					challengemus = 5
+				end
+				challengemus = $ or 1
+				local cmusic = "VRCH"..challengemus
+				COM_BufInsertText(consoleplayer, "tunes "..cmusic)
 			end
-			challengemus = $ or 1
-			local cmusic = "VRCH"..challengemus
-			COM_BufInsertText(consoleplayer, "tunes "..cmusic)
 		end
 	end
 	
