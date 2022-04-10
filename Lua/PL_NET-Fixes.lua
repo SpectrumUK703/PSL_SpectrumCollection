@@ -307,9 +307,9 @@ rawset(_G, "NET_Synch", function()
 					local music = server.P_BattleStatus[1].music or "BATL1"
 					COM_BufInsertText(consoleplayer, "tunes "..music)
 				else
-					if btl.shufflestatus or btl.r_exp or btl.r_levelupqueue or btl.r_numplayers
+					if btl.battlestate == BS_SHUFFLE or btl.battlestate == BS_END or btl.battlestate == BS_LEVELUP or btl.battlestate == BS_FINISH
 						S_ChangeMusic(btl.savemusic or MUS_PlayRandomBattleMusic("mus_battle_results"), nil, consoleplayer)
-					else
+					elseif btl.battlestate ~= BS_GAMEOVER
 						local music = btl.music or "BATL1"
 						S_ChangeMusic(music, true, consoleplayer)
 					end
@@ -708,6 +708,409 @@ local function PLYR_checkjoincontrol(p)
 					return true
 				end
 			end
+		end
+	end
+end
+
+local function statusConditionEffects(mo)	-- the little animations over the enemy's head when that happens
+	if not mo or not mo.valid or not mo.hp return end
+	if mo.hp <= 0 return end
+
+	-- down:
+	-- note: down isn't actually a status condition but still has its visual handled here because it's close enough
+	if mo.down
+		local an = leveltime * ANG1 * 8
+		for i = 1, 2 do
+			local dx = mo.x + 64*cos(an)
+			local dy = mo.y + 64*sin(an)
+			local dz = mo.z + mo.height + 12*sin(an + leveltime*ANG1*4)
+			local s = P_SpawnMobj(dx, dy, dz, MT_DUMMY)
+			s.state = S_SPRK1
+			s.scale = FRACUNIT*2
+			s.destscale = 0
+			s.frame = A|FF_FULLBRIGHT
+			s.tics = 1
+			if (leveltime%2)
+				s.fuse = 2
+			end
+			an = $+ ANG1*180
+		end
+	end
+
+	-- fields that spawn particles i guess??
+	if mo.fieldstate
+
+		if mo.fieldstate.type == FLD_ZIOVERSE
+
+			if leveltime%2 == 0
+
+				local x = mo.x + P_RandomRange(-64, 64)*mo.scale
+				local y = mo.y + P_RandomRange(-64, 64)*mo.scale
+				local z = mo.z + P_RandomRange(-64, 64)*mo.scale
+
+				P_SpawnMobj(x, y, z, MT_SUPERSPARK)
+
+			end
+
+		elseif mo.fieldstate.type == FLD_AGIVERSE
+
+			local rfac = (mo.maxhp + mo.maxsp) - mo.level
+
+			local ang = (rfac + leveltime)*ANG1*12
+			local zpos = mo.z + 32*mo.scale + 32*sin((rfac + leveltime)*ANG1*8)
+
+			local x = mo.x + 64*cos(ang)
+			local y = mo.y + 64*sin(ang)
+			local f = P_SpawnMobj(x, y, zpos, MT_DUMMY)
+			f.tics = 2
+			f.sprite = SPR_FPRT
+			f.frame = $ & ~FF_TRANSMASK
+			f.frame = $|FF_FULLBRIGHT|TR_TRANS20
+			f.scale = mo.scale*5/2
+
+			local g = P_SpawnGhostMobj(f)
+			g.destscale = 1
+			g.scalespeed = FRACUNIT/4
+		end
+	end
+
+	-- uh, i mean i guess we can count tetrakarn / makrakarn / mind charge / power charge as special effects too~
+
+	if server.P_BattleStatus[mo.battlen]
+	and server.P_BattleStatus[mo.battlen].battlestate == BS_DOTURN
+
+		if (mo.tetrakarn or mo.makarakarn or mo.tetraja)
+		and leveltime%2
+
+			local x, y = mo.x + 32*cos(mo.angle), mo.y + 32*sin(mo.angle)
+			local s = P_SpawnMobj(x, y, mo.z+mo.height/2, MT_DUMMY)
+			s.scale = mo.scale
+			s.fuse = 2
+			if mo.tetraja
+				s.sprite = SPR_ELEM
+			else
+				s.sprite = mo.tetrakarn and SPR_FORC or SPR_ARMA
+			end
+			s.frame = $|FF_PAPERSPRITE|FF_FULLBRIGHT |FF_TRANS50
+			s.angle = mo.angle + ANG1*90
+		end
+	end
+
+	-- mind charge
+	if mo.mindcharge
+		if not (leveltime%4)
+			local elec = P_SpawnMobj(mo.x, mo.y, mo.z + mo.height/2, MT_DUMMY)
+			elec.sprite = SPR_DELK
+			elec.frame = P_RandomRange(0, 7)|FF_FULLBRIGHT
+			elec.destscale = FRACUNIT*4
+			elec.scalespeed = FRACUNIT/4
+			elec.tics = TICRATE/8
+			elec.color = SKINCOLOR_CYAN
+		end
+
+		if leveltime %4 == 0
+			local a = R_PointToAngle(mo.x, mo.y)
+			local x = mo.x - cos(a)
+			local y = mo.y - sin(a)
+
+			local dummy = P_SpawnMobj(x, y, mo.z, MT_DUMMY)
+			if mo.skin
+				dummy.skin = mo.skin
+			end
+			dummy.state = mo.state
+			dummy.sprite = mo.sprite
+			dummy.sprite2 = mo.sprite2
+			dummy.frame = mo.frame
+			dummy.angle = mo.angle
+			dummy.scale = mo.scale
+			dummy.colorized = true
+			dummy.color = SKINCOLOR_CYAN
+			dummy.fuse = 2
+		end
+	end
+
+	-- power charge
+	if mo.powercharge
+		if not (leveltime%4)
+			local elec = P_SpawnMobj(mo.x, mo.y, mo.z + mo.height, MT_DUMMY)
+			elec.sprite = SPR_DELK
+			elec.frame = P_RandomRange(0, 7)|FF_FULLBRIGHT
+			elec.destscale = FRACUNIT*4
+			elec.scalespeed = FRACUNIT/4
+			elec.tics = TICRATE/8
+			elec.color = SKINCOLOR_CRIMSON
+		end
+
+		if leveltime %4 == 0
+			local a = R_PointToAngle(mo.x, mo.y)
+			local x = mo.x - cos(a)
+			local y = mo.y - sin(a)
+
+			local dummy = P_SpawnMobj(x, y, mo.z, MT_DUMMY)
+			if mo.skin
+				dummy.skin = mo.skin
+			end
+			dummy.state = mo.state
+			dummy.sprite = mo.sprite
+			dummy.sprite2 = mo.sprite2
+			dummy.frame = mo.frame
+			dummy.angle = mo.angle
+			dummy.scale = mo.scale
+			dummy.colorized = true
+			dummy.color = SKINCOLOR_CRIMSON
+			dummy.fuse = 2
+		end
+	end
+
+	-- guaranteed evasion
+	if mo.guaranteedevasion
+		if leveltime%10 == 0
+
+			local g = P_SpawnGhostMobj(mo)
+			g.colorized = true
+			g.destscale = mo.scale*4
+			g.scalespeed = mo.scale/12
+
+			g = P_SpawnGhostMobj(mo)
+			g.colorized = true
+			g.destscale = mo.scale*4
+			g.scalespeed = mo.scale/6
+		end
+	end
+
+	-- oh boy I wish Lua had switch cases LOL
+	-- burn
+
+	if mo.status_condition == COND_BURN
+		local steam = P_SpawnMobj(mo.x+P_RandomRange(-45, 45)*mo.scale, mo.y+P_RandomRange(-45, 45)*mo.scale, mo.z+P_RandomRange(5, 30)*mo.scale, MT_SMOKE)
+		P_SetObjectMomZ(steam, P_RandomRange(1, 3)*mo.scale)
+
+		if not (leveltime%2)
+			local fire = P_SpawnMobj(mo.x+P_RandomRange(-45, 45)*mo.scale, mo.y+P_RandomRange(-45, 45)*FRACUNIT, mo.z+P_RandomRange(5, 30)*mo.scale, MT_DUMMY)
+			fire.sprite = SPR_FPRT
+			fire.frame = $ & ~FF_TRANSMASK
+			fire.frame = $|FF_FULLBRIGHT|TR_TRANS20
+			fire.scale = mo.scale*5/2
+			fire.momz = P_RandomRange(1, 3)*mo.scale
+			fire.scalespeed = mo.scale/12
+			fire.destscale = 1
+			fire.tics = TICRATE
+		end
+
+	-- poison
+	elseif mo.status_condition == COND_POISON
+		for i = 1,2
+			local psn = P_SpawnMobj(mo.x+P_RandomRange(-15,15)*FRACUNIT, mo.y+P_RandomRange(-15,15)*FRACUNIT, mo.z+P_RandomRange(0,15)*FRACUNIT, MT_DUMMY)
+			psn.sprite = SPR_THOK
+			psn.frame = A
+			psn.color = SKINCOLOR_PURPLE
+			psn.scale = FRACUNIT/2
+			psn.destscale = FRACUNIT/99
+			psn.momz = P_RandomRange(5, 12)*FRACUNIT
+			psn.tics = TICRATE
+		end
+
+	-- brainwash: <3 <3 <3
+	elseif mo.status_condition == COND_BRAINWASH
+
+		for i = 1, 2
+			local s = P_SpawnMobj(mo.x + P_RandomRange(-32, 32)*FRACUNIT, mo.y + P_RandomRange(-32, 32)*FRACUNIT, mo.z + 32*FRACUNIT, MT_DUMMY)
+			s.sprite = SPR_LOVE
+			s.frame = P_RandomRange(0, 2)|FF_FULLBRIGHT|FF_TRANS30
+			s.momz = P_RandomRange(2, 5)*FRACUNIT
+			s.scale = P_RandomRange(FRACUNIT*3/4, FRACUNIT*3/2)
+			s.destscale = 1
+			s.tics = TICRATE*3/2
+		end
+
+	-- dizzy: stars above the head or whatvs
+	elseif mo.status_condition == COND_DIZZY
+
+		for i = 1, 3
+			local s = P_SpawnMobj(mo.x + P_RandomRange(-32, 32)*FRACUNIT, mo.y + P_RandomRange(-32, 32)*FRACUNIT, mo.z + 32*FRACUNIT, MT_DUMMY)
+			s.sprite = SPR_STUN
+			s.frame = P_RandomRange(0, 2)|FF_FULLBRIGHT|FF_TRANS30
+			s.color = P_RandomRange(0,1) and SKINCOLOR_LAVENDER or SKINCOLOR_ORANGE
+			s.momz = P_RandomRange(2, 5)*FRACUNIT
+			s.scale = P_RandomRange(FRACUNIT/2, FRACUNIT)
+			s.destscale = 1
+			s.tics = TICRATE*3/2
+		end
+
+	elseif mo.status_condition == COND_HEX
+
+		for i = 1, 3
+			local s = P_SpawnMobj(mo.x + P_RandomRange(-32, 32)*FRACUNIT, mo.y + P_RandomRange(-32, 32)*FRACUNIT, mo.z + 32*FRACUNIT, MT_DUMMY)
+			s.sprite = SPR_FEAR
+			s.frame = P_RandomRange(0, 1)|FF_FULLBRIGHT
+			s.momz = P_RandomRange(2, 5)*FRACUNIT
+			s.scale = P_RandomRange(FRACUNIT/2, FRACUNIT)
+			s.destscale = 1
+			s.tics = TICRATE*3/2
+		end
+
+	elseif mo.status_condtion == COND_HUNGER	-- ez just vore smth lol
+
+		local thok = P_SpawnMobj(mo.x+P_RandomRange(-40, 40)*FRACUNIT, mo.y+P_RandomRange(-40, 40)*FRACUNIT, mo.z+P_RandomRange(20, 60)*FRACUNIT, MT_DUMMY)
+		thok.sprite = SPR_SUMN
+		thok.frame = F|FF_FULLBRIGHT|TR_TRANS30
+		thok.momz = -P_RandomRange(6, 16)*FRACUNIT
+		thok.color = SKINCOLOR_GREEN
+		thok.tics = P_RandomRange(10, 35)
+
+	-- GO TO SLEEP -Cae-sama
+	elseif mo.status_condition == COND_SLEEP
+
+		if leveltime%16 == 0
+			local s = P_SpawnMobj(mo.x, mo.y, mo.z + 32*FRACUNIT, MT_DUMMY)
+			s.sprite = SPR_SLEP
+			s.frame = FF_FULLBRIGHT
+			s.momz = P_RandomRange(2, 5)*FRACUNIT
+			s.scale = P_RandomRange(FRACUNIT, FRACUNIT*3/2)
+			P_InstaThrust(s, P_RandomRange(0, 359)*ANG1, 4<<FRACBITS)
+			s.destscale = 1
+			s.tics = TICRATE*3/2
+		end
+
+	-- shock: shake and spawn yellow sparks
+	elseif mo.status_condition == COND_SHOCK
+		mo.flags2 = $|MF2_DONTDRAW
+		local dummy = P_SpawnMobj(mo.x + P_RandomRange(-4, 4)*FRACUNIT, mo.y + P_RandomRange(-4, 4)*FRACUNIT, mo.z, MT_DUMMY)
+		if mo.skin
+			dummy.skin = mo.skin
+		end
+		dummy.state = mo.state
+		dummy.sprite = mo.sprite
+		dummy.sprite2 = mo.sprite2
+		dummy.frame = mo.frame
+		dummy.angle = mo.angle
+		dummy.scale = mo.scale
+		dummy.color = mo.color
+		dummy.fuse = 2
+
+		if not (leveltime%4)
+			local elec = P_SpawnMobj(mo.x, mo.y, mo.z, MT_DUMMY)
+			elec.sprite = SPR_DELK
+			elec.frame = P_RandomRange(0, 7)|FF_FULLBRIGHT
+			elec.destscale = FRACUNIT*4
+			elec.scalespeed = FRACUNIT/4
+			elec.tics = TICRATE/8
+			elec.color = SKINCOLOR_YELLOW
+		end
+
+	-- silence! make as much noise as kanade (so none, dipshit)
+	elseif mo.status_condition == COND_SILENCE
+
+		local cam = server.P_BattleStatus[mo.battlen].cam
+
+		local startx = mo.x + 20*cos(cam.angle-ANG1*90)
+		local starty = mo.y + 20*sin(cam.angle-ANG1*90)
+
+		local glan = R_PointToAngle(startx, starty)
+		local glx = startx - 4*cos(glan)
+		local gly = starty - 4*sin(glan)
+
+		local stfu = P_SpawnMobj(glx, gly, mo.z + 48*FRACUNIT, MT_DUMMY)
+		stfu.sprite = SPR_STFU
+		stfu.frame = ((leveltime%21)/7)|FF_FULLBRIGHT
+		stfu.tics = 2
+
+	-- despair, teloli moment
+	elseif mo.status_condition == COND_DESPAIR
+
+		local cam = server.P_BattleStatus[mo.battlen].cam
+
+		local startx = mo.x + 20*cos(cam.angle-ANG1*90)
+		local starty = mo.y + 20*sin(cam.angle-ANG1*90)
+
+		local glan = R_PointToAngle(startx, starty)
+		local glx = startx - 4*cos(glan)
+		local gly = starty - 4*sin(glan)
+
+		local sad = P_SpawnMobj(glx, gly, mo.z + 48*FRACUNIT + P_RandomRange(-1, 1)*FRACUNIT, MT_DUMMY)
+		sad.sprite = SPR_DESP
+		sad.frame = FF_FULLBRIGHT
+		sad.tics = 2
+
+	-- rage (zxys tsun tsun mode~)
+	elseif mo.status_condition == COND_RAGE
+
+		local cam = server.P_BattleStatus[mo.battlen].cam
+
+		local startx = mo.x + 20*cos(cam.angle-ANG1*90) + P_RandomRange(-1, 1)*FRACUNIT
+		local starty = mo.y + 20*sin(cam.angle-ANG1*90) + P_RandomRange(-1, 1)*FRACUNIT
+
+		local glan = R_PointToAngle(startx, starty)
+		local glx = startx - 10*cos(glan)
+		local gly = starty - 10*sin(glan)
+
+		local tsun = P_SpawnMobj(glx, gly, mo.z + 48*FRACUNIT + P_RandomRange(-1, 1)*FRACUNIT, MT_DUMMY)
+		tsun.sprite = SPR_TSUN
+		tsun.frame = FF_FULLBRIGHT
+		tsun.scale = (leveltime%20 < 10) and FRACUNIT or FRACUNIT*3/4
+		tsun.tics = 2
+
+	-- freeze
+	elseif mo.status_condition == COND_FREEZE
+
+		local dust = P_SpawnMobj(mo.x+P_RandomRange(-64, 64)*FRACUNIT, mo.y+P_RandomRange(-64, 64)*FRACUNIT, mo.z+P_RandomRange(0, 64)*FRACUNIT, MT_DUMMY)
+		dust.flags = $|MF_NOGRAVITY|MF_NOCLIPHEIGHT
+		dust.state, dust.scale, dust.angle = S_BUFUDYNE_DUST1, FRACUNIT, 0
+		dust.destscale = FRACUNIT*9/4
+		dust.scalespeed = FRACUNIT/18
+		dust.momz = 5*FRACUNIT/2
+
+	-- hyper mode!
+	elseif mo.status_condition == COND_HYPER
+
+		-- spawn periodically flashing dummy
+		local glan = R_PointToAngle(mo.x, mo.y)
+		local glx = mo.x - 2*cos(glan)
+		local gly = mo.y - 2*sin(glan)
+
+		local inv = P_SpawnMobj(glx, gly, mo.z, MT_DUMMY)
+		inv.fuse = 2
+		inv.sprite = SPR_HYPR
+		inv.frame = (leveltime%8) /2
+		inv.scale = mo.scale
+
+		if leveltime%8 == 0
+
+			glx = mo.x - cos(glan)
+			gly = mo.y - sin(glan)
+
+			local dum = P_SpawnMobj(glx, gly, mo.z, MT_DUMMY)
+
+			dum.state = mo.state
+			dum.sprite = mo.sprite
+			if mo.skin
+				dum.skin = mo.skin
+				dum.sprite2 = mo.sprite2
+			end
+			dum.frame = mo.frame|FF_FULLBRIGHT
+			dum.color = SKINCOLOR_WHITE
+			dum.colorized = true
+			dum.angle = mo.angle
+			dum.color = mo.color
+			dum.scale = mo.scale
+			dum.flags = MF_NOGRAVITY|MF_BOSS|MF_NOCLIPTHING
+			dum.fuse = 2
+		end
+
+	elseif mo.status_condition == COND_SUPER
+		-- super colour:
+		local supercolor = charStats[mo.stats].supercolor_start
+		if supercolor
+			mo.color = supercolor + abs(((leveltime >> 1) % 9) - 4)
+		else
+			-- super orb
+			local scale = charStats[mo.stats].superorbscale or FRACUNIT*12/10
+			local caman = R_PointToAngle(mo.x, mo.y)
+
+			local orb = P_SpawnMobj(mo.x - cos(caman), mo.y - sin(caman), mo.z, MT_DUMMY)
+			orb.sprite = SPR_SORB
+			orb.frame = FF_FULLBRIGHT|FF_TRANS30| (leveltime%16 / 2)
+			orb.fuse = 2
 		end
 	end
 end
@@ -1797,409 +2200,6 @@ rawset(_G, "NET_Lobby", function()
 		state_2_func[server.P_netstat.netstate]()
 	end
 end)
-
-local function statusConditionEffects(mo)	-- the little animations over the enemy's head when that happens
-	if not mo or not mo.valid or not mo.hp return end
-	if mo.hp <= 0 return end
-
-	-- down:
-	-- note: down isn't actually a status condition but still has its visual handled here because it's close enough
-	if mo.down
-		local an = leveltime * ANG1 * 8
-		for i = 1, 2 do
-			local dx = mo.x + 64*cos(an)
-			local dy = mo.y + 64*sin(an)
-			local dz = mo.z + mo.height + 12*sin(an + leveltime*ANG1*4)
-			local s = P_SpawnMobj(dx, dy, dz, MT_DUMMY)
-			s.state = S_SPRK1
-			s.scale = FRACUNIT*2
-			s.destscale = 0
-			s.frame = A|FF_FULLBRIGHT
-			s.tics = 1
-			if (leveltime%2)
-				s.fuse = 2
-			end
-			an = $+ ANG1*180
-		end
-	end
-
-	-- fields that spawn particles i guess??
-	if mo.fieldstate
-
-		if mo.fieldstate.type == FLD_ZIOVERSE
-
-			if leveltime%2 == 0
-
-				local x = mo.x + P_RandomRange(-64, 64)*mo.scale
-				local y = mo.y + P_RandomRange(-64, 64)*mo.scale
-				local z = mo.z + P_RandomRange(-64, 64)*mo.scale
-
-				P_SpawnMobj(x, y, z, MT_SUPERSPARK)
-
-			end
-
-		elseif mo.fieldstate.type == FLD_AGIVERSE
-
-			local rfac = (mo.maxhp + mo.maxsp) - mo.level
-
-			local ang = (rfac + leveltime)*ANG1*12
-			local zpos = mo.z + 32*mo.scale + 32*sin((rfac + leveltime)*ANG1*8)
-
-			local x = mo.x + 64*cos(ang)
-			local y = mo.y + 64*sin(ang)
-			local f = P_SpawnMobj(x, y, zpos, MT_DUMMY)
-			f.tics = 2
-			f.sprite = SPR_FPRT
-			f.frame = $ & ~FF_TRANSMASK
-			f.frame = $|FF_FULLBRIGHT|TR_TRANS20
-			f.scale = mo.scale*5/2
-
-			local g = P_SpawnGhostMobj(f)
-			g.destscale = 1
-			g.scalespeed = FRACUNIT/4
-		end
-	end
-
-	-- uh, i mean i guess we can count tetrakarn / makrakarn / mind charge / power charge as special effects too~
-
-	if server.P_BattleStatus[mo.battlen]
-	and server.P_BattleStatus[mo.battlen].battlestate == BS_DOTURN
-
-		if (mo.tetrakarn or mo.makarakarn or mo.tetraja)
-		and leveltime%2
-
-			local x, y = mo.x + 32*cos(mo.angle), mo.y + 32*sin(mo.angle)
-			local s = P_SpawnMobj(x, y, mo.z+mo.height/2, MT_DUMMY)
-			s.scale = mo.scale
-			s.fuse = 2
-			if mo.tetraja
-				s.sprite = SPR_ELEM
-			else
-				s.sprite = mo.tetrakarn and SPR_FORC or SPR_ARMA
-			end
-			s.frame = $|FF_PAPERSPRITE|FF_FULLBRIGHT |FF_TRANS50
-			s.angle = mo.angle + ANG1*90
-		end
-	end
-
-	-- mind charge
-	if mo.mindcharge
-		if not (leveltime%4)
-			local elec = P_SpawnMobj(mo.x, mo.y, mo.z + mo.height/2, MT_DUMMY)
-			elec.sprite = SPR_DELK
-			elec.frame = P_RandomRange(0, 7)|FF_FULLBRIGHT
-			elec.destscale = FRACUNIT*4
-			elec.scalespeed = FRACUNIT/4
-			elec.tics = TICRATE/8
-			elec.color = SKINCOLOR_CYAN
-		end
-
-		if leveltime %4 == 0
-			local a = R_PointToAngle(mo.x, mo.y)
-			local x = mo.x - cos(a)
-			local y = mo.y - sin(a)
-
-			local dummy = P_SpawnMobj(x, y, mo.z, MT_DUMMY)
-			if mo.skin
-				dummy.skin = mo.skin
-			end
-			dummy.state = mo.state
-			dummy.sprite = mo.sprite
-			dummy.sprite2 = mo.sprite2
-			dummy.frame = mo.frame
-			dummy.angle = mo.angle
-			dummy.scale = mo.scale
-			dummy.colorized = true
-			dummy.color = SKINCOLOR_CYAN
-			dummy.fuse = 2
-		end
-	end
-
-	-- power charge
-	if mo.powercharge
-		if not (leveltime%4)
-			local elec = P_SpawnMobj(mo.x, mo.y, mo.z + mo.height, MT_DUMMY)
-			elec.sprite = SPR_DELK
-			elec.frame = P_RandomRange(0, 7)|FF_FULLBRIGHT
-			elec.destscale = FRACUNIT*4
-			elec.scalespeed = FRACUNIT/4
-			elec.tics = TICRATE/8
-			elec.color = SKINCOLOR_CRIMSON
-		end
-
-		if leveltime %4 == 0
-			local a = R_PointToAngle(mo.x, mo.y)
-			local x = mo.x - cos(a)
-			local y = mo.y - sin(a)
-
-			local dummy = P_SpawnMobj(x, y, mo.z, MT_DUMMY)
-			if mo.skin
-				dummy.skin = mo.skin
-			end
-			dummy.state = mo.state
-			dummy.sprite = mo.sprite
-			dummy.sprite2 = mo.sprite2
-			dummy.frame = mo.frame
-			dummy.angle = mo.angle
-			dummy.scale = mo.scale
-			dummy.colorized = true
-			dummy.color = SKINCOLOR_CRIMSON
-			dummy.fuse = 2
-		end
-	end
-
-	-- guaranteed evasion
-	if mo.guaranteedevasion
-		if leveltime%10 == 0
-
-			local g = P_SpawnGhostMobj(mo)
-			g.colorized = true
-			g.destscale = mo.scale*4
-			g.scalespeed = mo.scale/12
-
-			g = P_SpawnGhostMobj(mo)
-			g.colorized = true
-			g.destscale = mo.scale*4
-			g.scalespeed = mo.scale/6
-		end
-	end
-
-	-- oh boy I wish Lua had switch cases LOL
-	-- burn
-
-	if mo.status_condition == COND_BURN
-		local steam = P_SpawnMobj(mo.x+P_RandomRange(-45, 45)*mo.scale, mo.y+P_RandomRange(-45, 45)*mo.scale, mo.z+P_RandomRange(5, 30)*mo.scale, MT_SMOKE)
-		P_SetObjectMomZ(steam, P_RandomRange(1, 3)*mo.scale)
-
-		if not (leveltime%2)
-			local fire = P_SpawnMobj(mo.x+P_RandomRange(-45, 45)*mo.scale, mo.y+P_RandomRange(-45, 45)*FRACUNIT, mo.z+P_RandomRange(5, 30)*mo.scale, MT_DUMMY)
-			fire.sprite = SPR_FPRT
-			fire.frame = $ & ~FF_TRANSMASK
-			fire.frame = $|FF_FULLBRIGHT|TR_TRANS20
-			fire.scale = mo.scale*5/2
-			fire.momz = P_RandomRange(1, 3)*mo.scale
-			fire.scalespeed = mo.scale/12
-			fire.destscale = 1
-			fire.tics = TICRATE
-		end
-
-	-- poison
-	elseif mo.status_condition == COND_POISON
-		for i = 1,2
-			local psn = P_SpawnMobj(mo.x+P_RandomRange(-15,15)*FRACUNIT, mo.y+P_RandomRange(-15,15)*FRACUNIT, mo.z+P_RandomRange(0,15)*FRACUNIT, MT_DUMMY)
-			psn.sprite = SPR_THOK
-			psn.frame = A
-			psn.color = SKINCOLOR_PURPLE
-			psn.scale = FRACUNIT/2
-			psn.destscale = FRACUNIT/99
-			psn.momz = P_RandomRange(5, 12)*FRACUNIT
-			psn.tics = TICRATE
-		end
-
-	-- brainwash: <3 <3 <3
-	elseif mo.status_condition == COND_BRAINWASH
-
-		for i = 1, 2
-			local s = P_SpawnMobj(mo.x + P_RandomRange(-32, 32)*FRACUNIT, mo.y + P_RandomRange(-32, 32)*FRACUNIT, mo.z + 32*FRACUNIT, MT_DUMMY)
-			s.sprite = SPR_LOVE
-			s.frame = P_RandomRange(0, 2)|FF_FULLBRIGHT|FF_TRANS30
-			s.momz = P_RandomRange(2, 5)*FRACUNIT
-			s.scale = P_RandomRange(FRACUNIT*3/4, FRACUNIT*3/2)
-			s.destscale = 1
-			s.tics = TICRATE*3/2
-		end
-
-	-- dizzy: stars above the head or whatvs
-	elseif mo.status_condition == COND_DIZZY
-
-		for i = 1, 3
-			local s = P_SpawnMobj(mo.x + P_RandomRange(-32, 32)*FRACUNIT, mo.y + P_RandomRange(-32, 32)*FRACUNIT, mo.z + 32*FRACUNIT, MT_DUMMY)
-			s.sprite = SPR_STUN
-			s.frame = P_RandomRange(0, 2)|FF_FULLBRIGHT|FF_TRANS30
-			s.color = P_RandomRange(0,1) and SKINCOLOR_LAVENDER or SKINCOLOR_ORANGE
-			s.momz = P_RandomRange(2, 5)*FRACUNIT
-			s.scale = P_RandomRange(FRACUNIT/2, FRACUNIT)
-			s.destscale = 1
-			s.tics = TICRATE*3/2
-		end
-
-	elseif mo.status_condition == COND_HEX
-
-		for i = 1, 3
-			local s = P_SpawnMobj(mo.x + P_RandomRange(-32, 32)*FRACUNIT, mo.y + P_RandomRange(-32, 32)*FRACUNIT, mo.z + 32*FRACUNIT, MT_DUMMY)
-			s.sprite = SPR_FEAR
-			s.frame = P_RandomRange(0, 1)|FF_FULLBRIGHT
-			s.momz = P_RandomRange(2, 5)*FRACUNIT
-			s.scale = P_RandomRange(FRACUNIT/2, FRACUNIT)
-			s.destscale = 1
-			s.tics = TICRATE*3/2
-		end
-
-	elseif mo.status_condtion == COND_HUNGER	-- ez just vore smth lol
-
-		local thok = P_SpawnMobj(mo.x+P_RandomRange(-40, 40)*FRACUNIT, mo.y+P_RandomRange(-40, 40)*FRACUNIT, mo.z+P_RandomRange(20, 60)*FRACUNIT, MT_DUMMY)
-		thok.sprite = SPR_SUMN
-		thok.frame = F|FF_FULLBRIGHT|TR_TRANS30
-		thok.momz = -P_RandomRange(6, 16)*FRACUNIT
-		thok.color = SKINCOLOR_GREEN
-		thok.tics = P_RandomRange(10, 35)
-
-	-- GO TO SLEEP -Cae-sama
-	elseif mo.status_condition == COND_SLEEP
-
-		if leveltime%16 == 0
-			local s = P_SpawnMobj(mo.x, mo.y, mo.z + 32*FRACUNIT, MT_DUMMY)
-			s.sprite = SPR_SLEP
-			s.frame = FF_FULLBRIGHT
-			s.momz = P_RandomRange(2, 5)*FRACUNIT
-			s.scale = P_RandomRange(FRACUNIT, FRACUNIT*3/2)
-			P_InstaThrust(s, P_RandomRange(0, 359)*ANG1, 4<<FRACBITS)
-			s.destscale = 1
-			s.tics = TICRATE*3/2
-		end
-
-	-- shock: shake and spawn yellow sparks
-	elseif mo.status_condition == COND_SHOCK
-		mo.flags2 = $|MF2_DONTDRAW
-		local dummy = P_SpawnMobj(mo.x + P_RandomRange(-4, 4)*FRACUNIT, mo.y + P_RandomRange(-4, 4)*FRACUNIT, mo.z, MT_DUMMY)
-		if mo.skin
-			dummy.skin = mo.skin
-		end
-		dummy.state = mo.state
-		dummy.sprite = mo.sprite
-		dummy.sprite2 = mo.sprite2
-		dummy.frame = mo.frame
-		dummy.angle = mo.angle
-		dummy.scale = mo.scale
-		dummy.color = mo.color
-		dummy.fuse = 2
-
-		if not (leveltime%4)
-			local elec = P_SpawnMobj(mo.x, mo.y, mo.z, MT_DUMMY)
-			elec.sprite = SPR_DELK
-			elec.frame = P_RandomRange(0, 7)|FF_FULLBRIGHT
-			elec.destscale = FRACUNIT*4
-			elec.scalespeed = FRACUNIT/4
-			elec.tics = TICRATE/8
-			elec.color = SKINCOLOR_YELLOW
-		end
-
-	-- silence! make as much noise as kanade (so none, dipshit)
-	elseif mo.status_condition == COND_SILENCE
-
-		local cam = server.P_BattleStatus[mo.battlen].cam
-
-		local startx = mo.x + 20*cos(cam.angle-ANG1*90)
-		local starty = mo.y + 20*sin(cam.angle-ANG1*90)
-
-		local glan = R_PointToAngle(startx, starty)
-		local glx = startx - 4*cos(glan)
-		local gly = starty - 4*sin(glan)
-
-		local stfu = P_SpawnMobj(glx, gly, mo.z + 48*FRACUNIT, MT_DUMMY)
-		stfu.sprite = SPR_STFU
-		stfu.frame = ((leveltime%21)/7)|FF_FULLBRIGHT
-		stfu.tics = 2
-
-	-- despair, teloli moment
-	elseif mo.status_condition == COND_DESPAIR
-
-		local cam = server.P_BattleStatus[mo.battlen].cam
-
-		local startx = mo.x + 20*cos(cam.angle-ANG1*90)
-		local starty = mo.y + 20*sin(cam.angle-ANG1*90)
-
-		local glan = R_PointToAngle(startx, starty)
-		local glx = startx - 4*cos(glan)
-		local gly = starty - 4*sin(glan)
-
-		local sad = P_SpawnMobj(glx, gly, mo.z + 48*FRACUNIT + P_RandomRange(-1, 1)*FRACUNIT, MT_DUMMY)
-		sad.sprite = SPR_DESP
-		sad.frame = FF_FULLBRIGHT
-		sad.tics = 2
-
-	-- rage (zxys tsun tsun mode~)
-	elseif mo.status_condition == COND_RAGE
-
-		local cam = server.P_BattleStatus[mo.battlen].cam
-
-		local startx = mo.x + 20*cos(cam.angle-ANG1*90) + P_RandomRange(-1, 1)*FRACUNIT
-		local starty = mo.y + 20*sin(cam.angle-ANG1*90) + P_RandomRange(-1, 1)*FRACUNIT
-
-		local glan = R_PointToAngle(startx, starty)
-		local glx = startx - 10*cos(glan)
-		local gly = starty - 10*sin(glan)
-
-		local tsun = P_SpawnMobj(glx, gly, mo.z + 48*FRACUNIT + P_RandomRange(-1, 1)*FRACUNIT, MT_DUMMY)
-		tsun.sprite = SPR_TSUN
-		tsun.frame = FF_FULLBRIGHT
-		tsun.scale = (leveltime%20 < 10) and FRACUNIT or FRACUNIT*3/4
-		tsun.tics = 2
-
-	-- freeze
-	elseif mo.status_condition == COND_FREEZE
-
-		local dust = P_SpawnMobj(mo.x+P_RandomRange(-64, 64)*FRACUNIT, mo.y+P_RandomRange(-64, 64)*FRACUNIT, mo.z+P_RandomRange(0, 64)*FRACUNIT, MT_DUMMY)
-		dust.flags = $|MF_NOGRAVITY|MF_NOCLIPHEIGHT
-		dust.state, dust.scale, dust.angle = S_BUFUDYNE_DUST1, FRACUNIT, 0
-		dust.destscale = FRACUNIT*9/4
-		dust.scalespeed = FRACUNIT/18
-		dust.momz = 5*FRACUNIT/2
-
-	-- hyper mode!
-	elseif mo.status_condition == COND_HYPER
-
-		-- spawn periodically flashing dummy
-		local glan = R_PointToAngle(mo.x, mo.y)
-		local glx = mo.x - 2*cos(glan)
-		local gly = mo.y - 2*sin(glan)
-
-		local inv = P_SpawnMobj(glx, gly, mo.z, MT_DUMMY)
-		inv.fuse = 2
-		inv.sprite = SPR_HYPR
-		inv.frame = (leveltime%8) /2
-		inv.scale = mo.scale
-
-		if leveltime%8 == 0
-
-			glx = mo.x - cos(glan)
-			gly = mo.y - sin(glan)
-
-			local dum = P_SpawnMobj(glx, gly, mo.z, MT_DUMMY)
-
-			dum.state = mo.state
-			dum.sprite = mo.sprite
-			if mo.skin
-				dum.skin = mo.skin
-				dum.sprite2 = mo.sprite2
-			end
-			dum.frame = mo.frame|FF_FULLBRIGHT
-			dum.color = SKINCOLOR_WHITE
-			dum.colorized = true
-			dum.angle = mo.angle
-			dum.color = mo.color
-			dum.scale = mo.scale
-			dum.flags = MF_NOGRAVITY|MF_BOSS|MF_NOCLIPTHING
-			dum.fuse = 2
-		end
-
-	elseif mo.status_condition == COND_SUPER
-		-- super colour:
-		local supercolor = charStats[mo.stats].supercolor_start
-		if supercolor
-			mo.color = supercolor + abs(((leveltime >> 1) % 9) - 4)
-		else
-			-- super orb
-			local scale = charStats[mo.stats].superorbscale or FRACUNIT*12/10
-			local caman = R_PointToAngle(mo.x, mo.y)
-
-			local orb = P_SpawnMobj(mo.x - cos(caman), mo.y - sin(caman), mo.z, MT_DUMMY)
-			orb.sprite = SPR_SORB
-			orb.frame = FF_FULLBRIGHT|FF_TRANS30| (leveltime%16 / 2)
-			orb.fuse = 2
-		end
-	end
-end
 
 rawset(_G, "DNG_Thinker", function()
 
