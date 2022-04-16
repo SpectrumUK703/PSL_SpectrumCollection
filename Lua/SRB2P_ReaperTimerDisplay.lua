@@ -30,7 +30,7 @@ hud.add(function(v, p) //Most of this is copied from SRB2P's code
 	local time = dng.reapertimer
 	if time ~= nil
 		local timer
-		timer = ((time >= 1) and time) or ($ and $-1 or 34) //Always non-negative, the clock gets weird with negative times
+		timer = ((time >= 1) and time) or 1 //Always non-negative, the clock gets weird with negative times
 		if showreapertimer.value == 1
 			if not (dng.noreaper) and (reapertimers or (cv_reaper and cv_reaper.value))
 				drawTimeClock(v, bx, by, timer, 60*TICRATE) //SRB2P's clock drawing function

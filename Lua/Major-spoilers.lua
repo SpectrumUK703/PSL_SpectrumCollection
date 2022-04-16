@@ -46,9 +46,9 @@ attackDefs["all_out-alt"] = {
 								drawScreenwidePatch(v, v.cachePatch(patch))
 							end
 
-							local pp = v.cachePatch(charStats[mo.stats].hudaoa or enemyList[mo.enemy].hudaoa)
+							local pp = v.cachePatch(charStats[mo.stats] and charStats[mo.stats].hudaoa or enemyList[mo.enemy] and enemyList[mo.enemy].hudaoa)
 							if mo.status_condition == COND_SUPER
-							and (charStats[mo.stats].hudsaoa or enemyList[mo.enemy].hudsaoa)
+							and (charStats[mo.stats] and charStats[mo.stats].hudsaoa or enemyList[mo.enemy] and enemyList[mo.enemy].hudsaoa)
 								pp = v.cachePatch(charStats[mo.stats].hudsaoa or enemyList[mo.enemy].hudsaoa)
 							end
 
@@ -484,7 +484,7 @@ enemyList["reaper_alt"].skills = {	"megidolaon", "power charge", "mind charge",
 									"magarudyne", "maziodyne", "mafreidyne", "mapsiodyne", "tetrakarn", "makarakarn",
 									"dekaja", "dekunda", "infinite endure"}
 enemyList["alt"].noroguebuff = false //I want to make her stronger lol
-enemyList["alt"].hudaoa = "H_ALT05"
+enemyList["alt"].hudaoa = "H_ALTAOA"
 enemyList["alt"].anim_aoa_end = {SPR_VALT, G, H, 10}
 enemyList["alt"].anim_atk = {SPR_VALT, A, 2}
 //Thanks to SpringFox for this line
@@ -775,7 +775,7 @@ enemyList["alt"].thinker = function(mo)
 								end
 							end
 							if mo.knockeddown >= #enemies and not BTL_noAOAStatus(mo) and mo.hp
-								D_startEvent(btl.n, "ev_b7_all_out")
+								//D_startEvent(btl.n, "ev_b7_all_out")
 								return attackDefs["all_out-alt"], enemies
 							end
 							local attack, targets = newEnemyThinker(mo)
@@ -816,6 +816,17 @@ enemyList["alt"].thinker = function(mo)
 					-- open the battle with dekaja and heat riser
 					if calls == 1
 						alt_changePersona(mo, "pixie_alt")
+						if mo.name == "Re: Alt"
+							for i=1, #enemies do
+								local a = enemies[i]
+								for k, v in pairs(a.buffs) do
+									if v[1] > 0
+										return attackDefs["dekaja"], enemies
+									end
+								end
+							end
+							return attackDefs["heat riser"], {mo}
+						end
 						return attackDefs["dekaja"], enemies
 					
 					elseif calls == 2
@@ -833,19 +844,24 @@ enemyList["alt"].thinker = function(mo)
 						-- phase shift
 						if mo.hp < mo.maxhp*3/4	-- under 75% HP
 						and not (mo.mindcharge or mo.powercharge) //don't waste a mind charge haha
-							if mo.name == "Re: Alt"
-								//Make her more powerful (129 in all stats. Yes, it's just a copy of the rogue mode buff)
-								mo.strength = $*115/100
-								mo.magic = $*115/100
-								mo.agility = $*115/100
-								mo.endurance = $*115/100
-								mo.luck = $*115/100
-							end
 							alt_changePersona(mo, "pixie_alt")
 							mo.phase = 2
 							mo.thinkercalls = 2
 							if btl.turnorder[2] == mo
 								table.remove(btl.turnorder, 2)	-- remove self from turn order if phase shift overlaps, otherwise we'll screw everything over
+							end
+							if mo.name == "Re: Alt"
+								//Make her more powerful
+								mo.strength = 150 //$*115/100
+								mo.magic = 150 //$*115/100
+								mo.agility = 150 //$*115/100
+								mo.endurance = 150 //$*115/100
+								mo.luck = 150 //$*115/100
+								for k,v in pairs(mo.buffs) do
+									if v[1] < 0
+										return attackDefs["dekunda"], {mo}
+									end
+								end
 							end
 							return attackDefs["heat riser"], {mo}
 						end
@@ -870,9 +886,9 @@ enemyList["alt"].thinker = function(mo)
 						-- turn 3: Alice, Fire + Death
 						
 						elseif calls == 7
-							if mo.name == "Re: Alt"
-								for i,j in pairs(mo.enemies)
-									if isAttackTechnical(j, "trisagion") //Muhahaha!
+							if mo.name == "Re: Alt" and unfortunate_victim.status_condition ~= COND_FREEZE
+								for i,j in ipairs(mo.enemies)
+									if j.status_condition == COND_FREEZE //Muhahaha!
 										unfortunate_victim = j
 										break
 									end
@@ -893,9 +909,28 @@ enemyList["alt"].thinker = function(mo)
 						
 						elseif calls == 9
 							alt_changePersona(mo, "pixie_alt")
+							if mo.name == "Re: Alt"
+								for k,v in pairs(mo.buffs) do
+									if v[1] < 0
+										return attackDefs["dekunda"], {mo}
+									end
+								end
+								return attackDefs["heat riser"], {mo}
+							end
 							return attackDefs["dekunda"], {mo}
 							
 						elseif calls == 10
+							if mo.name == "Re: Alt"
+								for i=1, #enemies do
+									local a = enemies[i]
+									for k, v in pairs(a.buffs) do
+										if v[1] > 0
+											return attackDefs["dekaja"], enemies
+										end
+									end
+								end
+								return attackDefs["heat riser"], {mo}
+							end
 							return attackDefs["dekaja"], enemies
 						
 						-- turn 5: Mind charge megidolaon
@@ -934,6 +969,22 @@ enemyList["alt"].thinker = function(mo)
 							if btl.turnorder[2] == mo
 								table.remove(btl.turnorder, 2)	-- remove self from turn order if phase shift overlaps, otherwise we'll screw everything over
 							end
+							if mo.name == "Re: Alt"
+								//Make her even more powerful
+								mo.strength = 200 //$*115/100
+								mo.magic = 200 //$*115/100
+								mo.agility = 200 //$*115/100
+								mo.endurance = 200 //$*115/100
+								mo.luck = 200 //$*115/100
+								for i=1, #mo.enemies do
+									local a = mo.enemies[i]
+									for k, v in pairs(a.buffs) do
+										if v[1] > 0
+											return attackDefs["dekaja"], enemies
+										end
+									end
+								end
+							end
 							return attackDefs["heat riser"], {mo}
 						end
 						
@@ -943,9 +994,9 @@ enemyList["alt"].thinker = function(mo)
 							return attackDefs["mind charge"], {mo}
 						
 						elseif calls == 4
-							if mo.name == "Re: Alt" and not isAttackTechnical(unfortunate_victim, "panta rhei")
-								for i,j in pairs(mo.enemies)
-									if isAttackTechnical(j, "panta rhei") //Muhahaha!
+							if mo.name == "Re: Alt" and unfortunate_victim.status_condition ~= COND_BURN
+								for i,j in ipairs(mo.enemies)
+									if j.status_condition == COND_BURN //Muhahaha!
 										unfortunate_victim = j
 										break
 									end
@@ -961,7 +1012,7 @@ enemyList["alt"].thinker = function(mo)
 						elseif calls == 5
 							if mo.name == "Re: Alt"
 								local check = 0
-								for i,j in pairs(mo.enemies)
+								for i,j in ipairs(mo.enemies)
 									if j.status_condition ~= COND_SUPER
 										check = j
 										break
@@ -978,7 +1029,7 @@ enemyList["alt"].thinker = function(mo)
 							alt_changePersona(mo, "metatron_alt")
 							if mo.name == "Re: Alt"
 								local check = 0
-								for i,j in pairs(mo.enemies)
+								for i,j in ipairs(mo.enemies)
 									if j.status_condition ~= COND_SUPER
 										check = j
 										break
@@ -996,7 +1047,7 @@ enemyList["alt"].thinker = function(mo)
 								return attackDefs["mahama"], enemies
 							else
 								local check = 0
-								for i,j in pairs(mo.enemies)
+								for i,j in ipairs(mo.enemies)
 									if j.status_condition ~= COND_SUPER
 										check = j
 										break
@@ -1014,7 +1065,7 @@ enemyList["alt"].thinker = function(mo)
 								return attackDefs["mamudo"], enemies
 							else
 								local check = 0
-								for i,j in pairs(mo.enemies)
+								for i,j in ipairs(mo.enemies)
 									if j.status_condition ~= COND_SUPER
 										check = j
 										break
@@ -1032,9 +1083,9 @@ enemyList["alt"].thinker = function(mo)
 							return attackDefs["mind charge"], {mo}
 							
 						elseif calls == 10
-							if mo.name == "Re: Alt"
-								for i,j in pairs(mo.enemies) and not isAttackTechnical(unfortunate_victim, "thunder reign")
-									if isAttackTechnical(j, "thunder reign") //Muhahaha!
+							if mo.name == "Re: Alt" and unfortunate_victim.status_condition ~= COND_DIZZY
+								for i,j in ipairs(mo.enemies)
+									if j.status_condition == COND_DIZZY //Muhahaha!
 										unfortunate_victim = j
 										break
 									end
@@ -1051,7 +1102,7 @@ enemyList["alt"].thinker = function(mo)
 							alt_changePersona(mo, "alice_alt")
 							if mo.name == "Re: Alt"
 								local check = 0
-								for i,j in pairs(mo.enemies)
+								for i,j in ipairs(mo.enemies)
 									if j.status_condition ~= COND_SUPER
 										check = j
 										break
@@ -1067,7 +1118,7 @@ enemyList["alt"].thinker = function(mo)
 							alt_changePersona(mo, "pixie_alt")
 							if mo.name == "Re: Alt"
 								local check = 0
-								for i,j in pairs(mo.enemies)
+								for i,j in ipairs(mo.enemies)
 									if j.status_condition ~= COND_SUPER
 										check = j
 										break
@@ -1096,9 +1147,9 @@ enemyList["alt"].thinker = function(mo)
 						elseif calls == 15
 							//Actually, this was just cruel
 							//Which is just what is needed
-							if mo.name == "Re: Alt" and not isAttackTechnical(unfortunate_victim, "trisagion")
-								for i,j in pairs(mo.enemies)
-									if isAttackTechnical(j, "trisagion") //Muhahaha!
+							if mo.name == "Re: Alt" and unfortunate_victim.status_condition ~= COND_FREEZE
+								for i,j in ipairs(mo.enemies)
+									if j.status_condition == COND_FREEZE //Muhahaha!
 										unfortunate_victim = j
 										break
 									end
@@ -1112,9 +1163,9 @@ enemyList["alt"].thinker = function(mo)
 							return attackDefs["trisagion"], {unfortunate_victim}
 							
 						elseif calls == 16
-							if mo.name == "Re: Alt" and not isAttackTechnical(unfortunate_victim, "panta rhei")
-								for i,j in pairs(mo.enemies)
-									if isAttackTechnical(j, "panta rhei") //Muhahaha!
+							if mo.name == "Re: Alt" and unfortunate_victim.status_condition ~= COND_BURN
+								for i,j in ipairs(mo.enemies)
+									if j.status_condition == COND_BURN //Muhahaha!
 										unfortunate_victim = j
 										break
 									end
@@ -1129,8 +1180,27 @@ enemyList["alt"].thinker = function(mo)
 							
 						-- Turn 8: Dekaja, Dekunda
 						elseif calls == 17
+							if mo.name == "Re: Alt"
+								for k,v in pairs(mo.buffs) do
+									if v[1] < 0
+										return attackDefs["dekunda"], {mo}
+									end
+								end
+								return attackDefs["heat riser"], {mo}
+							end
 							return attackDefs["dekunda"], {mo}
 						elseif calls == 18
+							if mo.name == "Re: Alt"
+								for i=1, #mo.enemies do
+									local a = mo.enemies[i]
+									for k, v in pairs(a.buffs) do
+										if v[1] > 0
+											return attackDefs["dekaja"], enemies
+										end
+									end
+								end
+								return attackDefs["heat riser"], {mo}
+							end
 							return attackDefs["dekaja"], enemies
 							
 						-- Turn 9: Mind Charge -> Megidolaon, and then repeat!
@@ -1155,7 +1225,7 @@ enemyList["alt"].thinker = function(mo)
 							alt_changePersona(mo, "metatron_alt", true) //Pinch phase skills if she gets one mores
 							if mo.name == "Re: Alt"
 								local check = 0
-								for i,j in pairs(mo.enemies)
+								for i,j in ipairs(mo.enemies)
 									if j.status_condition ~= COND_SUPER
 										check = j
 										break
@@ -1171,7 +1241,7 @@ enemyList["alt"].thinker = function(mo)
 						elseif calls == 5
 							if mo.name == "Re: Alt"
 								local check = 0
-								for i,j in pairs(mo.enemies)
+								for i,j in ipairs(mo.enemies)
 									if j.status_condition ~= COND_SUPER
 										check = j
 										break
@@ -1189,7 +1259,7 @@ enemyList["alt"].thinker = function(mo)
 								return attackDefs["mamudoon"], enemies
 							else
 								local check = 0
-								for i,j in pairs(mo.enemies)
+								for i,j in ipairs(mo.enemies)
 									if j.status_condition ~= COND_SUPER
 										check = j
 										break
@@ -1287,7 +1357,7 @@ local function B7_cutscenetriggers_rematch(btl)
 	if server.P_DialogueStatus[btl.n].running return end
 	
 	if not en.deathanim	-- dead
-		D_startEvent(btl.n, "ev_b7_end_rematch")
+		D_startEvent(btl.n, "ev_b7_end")
 		
 	elseif en.hp < en.maxhp
 	and not en.cutstate
@@ -1308,6 +1378,18 @@ local function B7_cutscenetriggers_rematch(btl)
 	and en.hp < en.maxhp/4
 		D_startEvent(btl.n, "ev_b7_25")
 		en.cutstate = 4	
+
+	elseif en.cutstate and en.cutstate >= 2 and not en.allsuper
+		local count = 0
+		for k,v in ipairs(ps)
+			if v.status_condition == COND_SUPER
+				count = $+1
+			end
+		end
+		if count >= #ps
+			en.allsuper = 1
+			D_startEvent(btl.n, "ev_b7_allsuper")
+		end
 	end
 end	
 
@@ -1330,13 +1412,14 @@ local function hud_front(v, evt)
 	end
 end
 
-eventList["ev_b7_all_out"] = { //Good luck seeing this event lmao
+//This event bugs out if you died to the AOA lol
+/*eventList["ev_b7_all_out"] = { //Good luck seeing this event lmao
 		[1] = {"text", "Alt", "I did say I'd be going all out!", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-}
+}*/
 
 //I'm bad at writing character dialogue, I mostly left it the same as the original lol
 //Actually, I should just make it the same as the original, but with one or two lines about how similar it is lol
-eventList["ev_b7_end_rematch"] = {
+/*eventList["ev_b7_end_rematch"] = {
 
 		["hud_front"] = hud_front,
 
@@ -1365,7 +1448,7 @@ eventList["ev_b7_end_rematch"] = {
 		[8] = {"text", "Alt", "Though it doesn't mean you get to be as lazy as I am from now on.", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
 		[9] = {"text", "Alt", "Someday, you might just find yourselves facing an even greater power... ", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
 		[10] = {"text", "Alt", "So don't stop honing your skills!", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		[11] = {"text", "Alt", "(Hm, déjà vu?)", nil, nil, nil, {"H_ALT05", SKINCOLOR_BLUE}},
+		[11] = {"text", "Alt", "(Hm, deja vu?)", nil, nil, nil, {"H_ALT05", SKINCOLOR_BLUE}},
 		[12] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
 		[13] = {"text", "Alt", "Now then.", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
 		[14] = {"text", "Alt", "I've worked up quite an appetite with all that fighting...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
@@ -1391,6 +1474,12 @@ eventList["ev_b7_end_rematch"] = {
 								end
 							end},
 		
+}*/
+
+eventList["ev_b7_allsuper"] = {
+	[1] = {"text", "Alt", "Oops! All super?", nil, nil, nil, {"H_ALT05", SKINCOLOR_BLUE}},
+	[2] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
+	[3] = {"text", "Alt", "Oops! All Megidolaon!", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
 }
 
 eventList["ev_b7_start_rematch"] = {
@@ -1499,9 +1588,8 @@ eventList["ev_b7_start_rematch"] = {
 	
 	[4] = {"text", "Alt", "Man, that clown's still the strongest thing this place has?", nil, nil, nil, {"H_ALT04", SKINCOLOR_BLUE}},
 	[5] = {"text", "Alt", "That sucks.", nil, nil, nil, {"H_ALT04", SKINCOLOR_BLUE}},
-	[6] = {"text", "Alt", "(Wait, did I say still?)", nil, nil, nil, {"H_ALT05", SKINCOLOR_BLUE}},
 	
-	[7] = {"function", 	function(evt, btl)
+	[6] = {"function", 	function(evt, btl)
 							
 							local t = server.plentities[btl.n][1].enemies[2]	-- hacky, but works....
 							local cam = btl.cam
@@ -1519,13 +1607,13 @@ eventList["ev_b7_start_rematch"] = {
 							end
 						end},
 
-	[8] = {"text", "Alt", "We can't have things end this way now can we?", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	[9] = {"text", "Alt", "I had the cookies ready to watch you lot have a nice fight, but it got boring instantly!", nil, nil, nil, {"H_ALT04", SKINCOLOR_BLUE}},
-	[10] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	[11] = {"text", "Alt", "Long story short...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-	[12] = {"text", "Alt", "Try not to bore me as much as that clown I just erased.", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
+	[7] = {"text", "Alt", "We can't have things end this way now can we?", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
+	[8] = {"text", "Alt", "I had the cookies ready to watch you lot have a nice fight, but it got boring instantly!", nil, nil, nil, {"H_ALT04", SKINCOLOR_BLUE}},
+	[9] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
+	[10] = {"text", "Alt", "Long story short...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
+	[11] = {"text", "Alt", "Try not to bore me as much as that clown I just erased.", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
 	
-	[13] = {"function", 	function(evt, btl)
+	[12] = {"function", 	function(evt, btl)
 							
 							local t = server.plentities[btl.n][1].enemies[2]	-- hacky, but works....
 							local cam = btl.cam

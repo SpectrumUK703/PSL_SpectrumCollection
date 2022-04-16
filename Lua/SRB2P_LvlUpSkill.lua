@@ -7,8 +7,8 @@ rawset(_G, "BTL_levelupAnimation", function(mo)
 	if not mo return end
 
 	local mynum	-- our player num:
-	for i = 1, 4 do
-		if server.plentities[mo.battlen][i] == mo
+	for i = 1, #server.plentities[pn] do
+		if server.plentities[pn][i] == mo
 			mynum = i
 			break
 		end
