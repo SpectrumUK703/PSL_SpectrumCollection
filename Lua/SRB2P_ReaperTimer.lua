@@ -223,21 +223,6 @@ if CV_FindVar("reapertimerall")
 		table.insert(netgameplay_opt, {"Reaper timer (Monad)", 100, #netgameplay_opt*12+20, CT_CVARNUM, {CV_FindVar("reapertimer7"), -1, 60}, nil, "Reaper spawn timer (in minutes) for the Monad block."})
 	end*/
 end
-if CV_FindVar("fewerspikes")
-	table.insert(netgameplay_opt, {"Fewer spikes", 100, #netgameplay_opt*12+20, CT_CVAR, CV_FindVar("fewerspikes"), nil, "Fewer spikes appear in dungeons."})
-end
-if CV_FindVar("enemyhealchance")
-	table.insert(netgameplay_opt, {"Enemy Heal Chance", 100, #netgameplay_opt*12+20, CT_CVARNUM, {CV_FindVar("enemyhealchance"), 0, 100}, nil, "Modify enemies' chance of using heal skills"})
-end
-if CV_FindVar("reaperrespawns")
-	table.insert(netgameplay_opt, {"Reaper respawning", 100, #netgameplay_opt*12+20, CT_CVAR, CV_FindVar("reaperrespawns"), nil, "The Reaper respawns when defeated (On is vanilla SRB2P behaviour)"})
-end
-if CV_FindVar("mnemesisrogue") and srb2p.local_conds[UNLOCK_MR_FINISHED] //Spoilers (also only works with the unlock fix though)
-	table.insert(netgameplay_opt, {"Metal Nemesis Rogue", 100, #netgameplay_opt*12+20, CT_CVAR, CV_FindVar("mnemesisrogue"), nil, "Allows Metal Nemesis' arms to be affected by Rogue mode"})
-end
-if CV_FindVar("monadrematch") and srb2p.local_conds[UNLOCK_B7_FINISHED] //Well, this will only work with the unlock fix lmao (also spoilers)
-	table.insert(netgameplay_opt, {"Monad Rematch", 100, #netgameplay_opt*12+20, CT_CVAR, CV_FindVar("monadrematch"), nil, "Enable Re: Alt."})
-end
 
 local menustates_main = {
 	"MS_TITLE",	-- Main title screen, PRESS ENTER

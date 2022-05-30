@@ -1,10 +1,3 @@
-//I would replace the VFX_Play function here, but that'd mean either breaking Jenna's QOL mod or stealing from her, so I'll just use this dirty hack instead
-addHook("PlayerThink", function(p)
-	if p.mo and p.mo.valid
-		p.mo.name = p.name or p.mo.skin or "WTF" //No name or skin?!?!?!
-	end
-end)
-
 //Actually, this should also fix issues
 //Copied and edited from Player_Stats.LUA in SRB2P-main.pk3
 for k, v in pairs(charStats)

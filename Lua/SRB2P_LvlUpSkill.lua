@@ -1,6 +1,6 @@
 -- do level up animation
 //(edited from Battle.lua)
-rawset(_G, "BTL_levelupAnimation", function(mo)
+BTL_levelupAnimation = function(mo)
 	local btl = server.P_BattleStatus[mo.battlen]
 	local pn = mo.battlen
 
@@ -84,13 +84,13 @@ rawset(_G, "BTL_levelupAnimation", function(mo)
 				mo.r_forgetselect = 1	-- start at skill 1 that we will forget
 				//look for a similar skill to forget
 				for i=1, #mo.skills
-					if attackDefs[mo.skills[i]].type == attackDefs[btl.r_newskillsqueue[mynum][1][1]].type //Look for a similar skill
+					local a = attackDefs[btl.r_newskillsqueue[mynum][1][1]]
+					if attackDefs[mo.skills[i]].type == a.type //Look for a similar skill
+					and attackDefs[mo.skills[i]].target == a.target
+					and attackDefs[mo.skills[i]].costtype == a.costtype
+					and attackDefs[mo.skills[i]].passive == a.passive
 						mo.r_forgetselect = i //Start the player on a similar skill
-						if attackDefs[mo.skills[i]].target == attackDefs[btl.r_newskillsqueue[mynum][1][1]].target
-						and attackDefs[mo.skills[i]].costtype == attackDefs[btl.r_newskillsqueue[mynum][1][1]].costtype
-						and attackDefs[mo.skills[i]].passive == attackDefs[btl.r_newskillsqueue[mynum][1][1]].passive
-							break
-						end
+						break
 					end
 				end
 				-- double check to see if we can't select the skill to forget by default:
@@ -197,4 +197,4 @@ rawset(_G, "BTL_levelupAnimation", function(mo)
 			end
 		end
 	end
-end)
+end

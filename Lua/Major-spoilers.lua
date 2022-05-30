@@ -483,64 +483,36 @@ enemyList["reaper_alt"].skills = {	"megidolaon", "power charge", "mind charge",
 									"fire amp", "ice amp", "elec amp", "wind amp", "psy amp", "nuke amp", "bless amp", "curse amp",
 									"magarudyne", "maziodyne", "mafreidyne", "mapsiodyne", "tetrakarn", "makarakarn",
 									"dekaja", "dekunda", "infinite endure"}
-enemyList["alt"].noroguebuff = false //I want to make her stronger lol
 enemyList["alt"].hudaoa = "H_ALTAOA"
 enemyList["alt"].anim_aoa_end = {SPR_VALT, G, H, 10}
 enemyList["alt"].anim_atk = {SPR_VALT, A, 2}
 //Thanks to SpringFox for this line
 enemyList["alt"].aoa_quote = "Mh? Is that it? \nHow disappointing~"
 
-if CV_FindVar("monadrematch") then return end
-local monadrematch = CV_RegisterVar({
-	name = "monadrematch",
-	defaultvalue = "Off",
-	flags = CV_NETVAR,
-	possiblevalue = CV_OnOff
-})
-
-enemyList["reaper_alt"].thinker = function(mo)
-						local btl = server.P_BattleStatus[mo.battlen]
-						mo.thinkercalls = $ and $+1 or 1
-						if server and server.roguemode and monadrematch.value == 1
-							if mo.thinkercalls == 1
-								if P_RandomChance(FRACUNIT/2)
-									return attackDefs["mind charge"], {mo}
-								else
-									return attackDefs["power charge"], {mo}
-								end
-							elseif mo.thinkercalls == 2
-								D_startEvent(mo.battlen, "ev_b7_start_rematch")
-								return newEnemyThinker(mo)
-							end
-						elseif server.reaperdefeated
-							D_startEvent(mo.battlen, "ev_b7_start_reaperdefeated")
-						else
-							D_startEvent(mo.battlen, "ev_b7_start")
-						end
-						return attackDefs["heat riser"], {mo}
-					end
-
 enemyList["alt"].thinker = function(mo)
-		
+
 					-- Alt thinker
 					-- This thinker kinda sucks and could maybe use some optimization, but it does its job, I suppose...
-					
+
 					mo.deathanim = true	-- hack since there are isolated cases of this not working?
-					
-					local function alt_changePersona(alt, persona, pinch)
+
+					local function alt_changePersona(alt, persona)
+
+						local pinch = (alt.phase == 3)
+
 						alt.persona = personaList[persona]
 						local p = alt.persona
 						alt.weak = p.weak or 0
 						alt.resist = p.resist or 0
 						alt.drain = p.drain or 0
 						alt.block = p.block or 0
-						
+
 						-- set skill lists:
 						local pskills
-						
-						if not pinch and mo.name ~= "Re: Alt"
+
+						if not pinch
 							pskills = {
-								
+
 								["pixie_alt"] = {
 									"panta rhei",
 									"thunder reign",
@@ -552,8 +524,9 @@ enemyList["alt"].thinker = function(mo)
 									"dekaja",
 									"dekunda",
 									"patra",
+									"almighty amp",
 								},
-								
+
 								["alice_alt"] = {
 									"evil smile",
 									"maeigaon",
@@ -566,10 +539,11 @@ enemyList["alt"].thinker = function(mo)
 									"psy boost",
 									"psiodyne",
 									"eigaon",
-								},	
-								
+									"almighty amp",
+								},
+
 								["kfrost_alt"] = {
-									
+
 									"ice boost",
 									"nuke boost",
 									"niflheim",
@@ -578,9 +552,9 @@ enemyList["alt"].thinker = function(mo)
 									"mafreidyne",
 									"atomic flare",
 								},
-								
+
 								["metatron_alt"] = {
-									
+
 									"hamaon",
 									"megaton raid",
 									"brave blade",
@@ -589,104 +563,11 @@ enemyList["alt"].thinker = function(mo)
 									"kougaon",
 									"bless boost",
 								},
-							}	
-						elseif pinch and mo.name == "Re: Alt"	//Even harder skills?
-								
-							pskills = {
-								
-								["pixie_alt"] = {
-									"panta rhei",
-									"thunder reign",
-									"megidolaon",
-									"megagarula",
-									"maziodyne",
-									"mind charge",
-									"elec amp",
-									"wind amp",
-									"dekaja",
-									"dekunda",
-									"patra",
-									"elec boost",
-									"wind boost",
-									"heat riser",
-									"shock boost",
-									"resist dizzy",
-									"null sleep",
-								},
-								
-								["alice_alt"] = {
-									"evil smile",
-									"ghastly wail",
-									"maeigaon",
-									"die for me",
-									"die for me",
-									"die for me",
-									"megidolaon",
-									"psycho force",
-									"mapsiodyne",
-									"trisagion",
-									"curse amp",
-									"fire amp",
-									"psy amp",
-									"maragidyne",
-									"eggion",
-									"curse boost",
-									"fire boost",
-									"psy boost",
-									"burn boost",
-									"hex boost",
-									"virus breath",
-									"poison boost",
-									"marakunda",
-								},								
-
-								["kfrost_alt"] = {
-									
-									"ice amp",
-									"nuke amp",
-									"niflheim",
-									"mabufudyne",
-									"marakunda",
-									"mamakanda",
-									"masukunda",
-									"matarunda",
-									"atomic flare",
-									"mafreidyne",
-									"ice boost",
-									"nuke boost",
-									"freeze boost",
-									"resist burn",
-									"megaton raid",
-								},
-								
-								["metatron_alt"] = {
-									
-									"mahamaon",
-									"megaton raid",
-									"brave blade",
-									"vicious strike",
-									"akasha arts",
-									"deathbound",
-									"pralaya",
-									"god hand",
-									"myriad slashes",
-									"agneyastra",
-									"makougaon",
-									"bless amp",
-									"bless boost",
-									"hard knuckle",
-									"sharp edge",
-									"hard stab",
-									"debilitate",
-									"megidolaon",
-								},								
-								
 							}
-							
 						else	-- harder moves
-								
+
 							pskills = {
-								
+
 								["pixie_alt"] = {
 									"panta rhei",
 									"thunder reign",
@@ -694,14 +575,17 @@ enemyList["alt"].thinker = function(mo)
 									"magarudyne",
 									"maziodyne",
 									"megidolaon",
+									"magarudyne",
+									"maziodyne",
 									"mind charge",
 									"elec amp",
 									"wind amp",
+									"almighty amp",
 									"dekaja",
 									"dekunda",
 									"patra",
 								},
-								
+
 								["alice_alt"] = {
 									"evil smile",
 									"maeigaon",
@@ -716,10 +600,13 @@ enemyList["alt"].thinker = function(mo)
 									"eigaon",
 									"die for me",
 									"die for me",
-								},								
+									"black viper",
+									"black viper",
+									"almighty amp",
+								},
 
 								["kfrost_alt"] = {
-									
+
 									"ice amp",
 									"nuke amp",
 									"niflheim",
@@ -731,9 +618,9 @@ enemyList["alt"].thinker = function(mo)
 									"atomic flare",
 									"mafreidyne",
 								},
-								
+
 								["metatron_alt"] = {
-									
+
 									"mahamaon",
 									"megaton raid",
 									"brave blade",
@@ -743,1304 +630,309 @@ enemyList["alt"].thinker = function(mo)
 									"god hand",
 									"makougaon",
 									"bless amp",
-								},								
-								
+								},
+
 							}
-							
+
 						end
-						
+
 						if pskills[persona]
 							alt.skills = pskills[persona]
 							BTL_splitSkills(alt)
 						end
-						
-						
+
+
 					end
-				
+
 					local enemies = mo.enemies
 					local unfortunate_victim = mo.enemies[P_RandomRange(1, #enemies)]
-					
+
 					local btl = server.P_BattleStatus[mo.battlen]
 					local lastturn = btl.turnorder[2] ~= mo
-					
+
 					-- in case of 1mores, don't advance the AI, cast random skills with the currently equipped Persona
-					if mo.batontouch 
-						//Hehehe, I am evil
-						if mo.name == "Re: Alt" and mo.phase and mo.phase >= 2 //She did say she can go all out haha
-							local enemies = mo.enemies
-							mo.knockeddown = 0
-							for i,j in ipairs(enemies)
-								if j.down or (j.hp == 0)
-									mo.knockeddown = $+1
-								end
-							end
-							if mo.knockeddown >= #enemies and not BTL_noAOAStatus(mo) and mo.hp
-								//D_startEvent(btl.n, "ev_b7_all_out")
-								return attackDefs["all_out-alt"], enemies
-							end
-							local attack, targets = newEnemyThinker(mo)
-							if (targets[1].status_condition ~= COND_SUPER)
-							or attack.type == ATK_ALMIGHTY or attack.type == ATK_SUPPORT or attack.type == ATK_HEAL
-								return attack, targets //Those three types of attacks are fine
-							else
-								local check = 0
-								for i,j in pairs(targets)
-									if j.status_condition ~= COND_SUPER
-										check = j
-									end
-								end
-								if check
-									return attack, targets
-								else
-									local megipersonas = {"pixie_alt", "alice_alt", "metatron_alt"}
-									if mo.persona == "kfrost_alt"
-										alt_changePersona(mo, megipersonas[P_RandomRange(1, #megipersonas)], true)
-									end
-									return attackDefs["megidolaon"], enemies
-								end
+					if mo.batontouch
+						//Alt AOAs lol
+						local enemies = mo.enemies
+						mo.knockeddown = 0
+						for i,j in ipairs(enemies)
+							if j.down or (j.hp == 0)
+								mo.knockeddown = $+1
 							end
 						end
-						
-						return newEnemyThinker(mo)
+						if mo.knockeddown >= #enemies and not BTL_noAOAStatus(mo) and mo.hp
+							return attackDefs["all_out-alt"], enemies
+						end
+						return generalEnemyThinker(mo)
 					end
-					
+
 					mo.thinkercalls = $ and $+1 or 1	-- calls for current phase
 					mo.totalcalls = $ and $+1 or 1		-- calls for total fight
-					
+
 					mo.phase = $ or 1	-- phase is determined by HP count
-					
-					
+
+
 					local calls = mo.thinkercalls
 					local totalcalls = mo.totalcalls
-					
+
 					-- open the battle with dekaja and heat riser
 					if calls == 1
 						alt_changePersona(mo, "pixie_alt")
-						if mo.name == "Re: Alt"
-							for i=1, #enemies do
-								local a = enemies[i]
-								for k, v in pairs(a.buffs) do
-									if v[1] > 0
-										return attackDefs["dekaja"], enemies
-									end
-								end
-							end
-							return attackDefs["heat riser"], {mo}
-						end
 						return attackDefs["dekaja"], enemies
-					
+
 					elseif calls == 2
 						return attackDefs["heat riser"], {mo}
-						
+
 					end
-					
+
+					-- if there are barriers or players are super, use some targetted almighty...~
+					local numbarriers = 0
+					local barriertarget
+
+					for i = 1, #enemies do
+						local en = enemies[i]
+						if en.tetrakarn or en.makarakarn or en.status_condition == COND_SUPER
+							barriertarget = en
+							numbarriers = $+1
+						end
+					end
+
+					if numbarriers
+					-- check to make sure it's our first turn
+					and btl.turnorder[2] == mo
+					and (P_RandomRange(0, 1) or numbarriers > 1)
+
+					-- don't do that when we should switch phases
+					and not (mo.hp < mo.maxhp*3/4 and mo.phase == 1)
+					and not (mo.hp < mo.maxhp/2 and mo.phase == 2)
+
+						mo.thinkercalls = $+1	-- advance thinker anyway
+
+						if numbarriers > 1
+						or P_RandomRange(0, 1)
+							alt_changePersona(mo, "pixie_alt")
+							return attackDefs["megidolaon"], enemies
+						else
+							alt_changePersona(mo, "alice_alt")
+							return attackDefs["black viper"], {barriertarget}
+						end
+					end
+
 					-- MODE 1: HP > 75%
 					/*
 						In this phase, go soft on the player, do highly telegraphed attacks and only go haywire after 6 turns.
 					*/
-					
+
 					if mo.phase == 1
-						
+
 						-- phase shift
 						if mo.hp < mo.maxhp*3/4	-- under 75% HP
-						and not (mo.mindcharge or mo.powercharge) //don't waste a mind charge haha
+						and btl.turnorder[2] ~= mo
 							alt_changePersona(mo, "pixie_alt")
 							mo.phase = 2
 							mo.thinkercalls = 2
-							if btl.turnorder[2] == mo
-								table.remove(btl.turnorder, 2)	-- remove self from turn order if phase shift overlaps, otherwise we'll screw everything over
+
+							if mo.buffs["atk"][1] <= 0
+							and mo.buffs["def"][1] <= 0
+							and mo.buffs["agi"][1] <= 0
+								return attackDefs["turntables"], btl.fighters
+							else
+								return attackDefs["heat riser"], {mo}
 							end
-							if mo.name == "Re: Alt"
-								//Make her more powerful
-								mo.strength = 150 //$*115/100
-								mo.magic = 150 //$*115/100
-								mo.agility = 150 //$*115/100
-								mo.endurance = 150 //$*115/100
-								mo.luck = 150 //$*115/100
-								for k,v in pairs(mo.buffs) do
-									if v[1] < 0
-										return attackDefs["dekunda"], {mo}
-									end
-								end
-							end
-							return attackDefs["heat riser"], {mo}
 						end
-						
+
 						-- turn 1: Metatron phys attacks
 						if calls == 3
 							alt_changePersona(mo, "metatron_alt")
 							return attackDefs["vicious strike"], enemies
-							
+
 						elseif calls == 4
 							return attackDefs["megaton raid"], {unfortunate_victim}
-						
-						
+
+
 						-- turn 2: King Frost ice attacks, marakunda
 						elseif calls == 5
 							alt_changePersona(mo, "kfrost_alt")
 							return attackDefs["niflheim"], {unfortunate_victim}
-							
+
 						elseif calls == 6
 							return attackDefs["marakunda"], enemies
-						
+
 						-- turn 3: Alice, Fire + Death
-						
+
 						elseif calls == 7
-							if mo.name == "Re: Alt" and unfortunate_victim.status_condition ~= COND_FREEZE
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition == COND_FREEZE //Muhahaha!
-										unfortunate_victim = j
-										break
-									end
-								end
-							end
 							alt_changePersona(mo, "alice_alt")
 							return attackDefs["trisagion"], {unfortunate_victim}
-							
-						elseif calls == 8	
-							if mo.name ~= "Re: Alt"
-								return attackDefs["mudoon"], {unfortunate_victim}
-							else
-								return attackDefs["mamudoon"], enemies
-							end
-						
+
+						elseif calls == 8
+
+							return attackDefs["mudoon"], {unfortunate_victim}
+
 						-- turn 4: Pixie, dekunda, dekaja, prepare for megidolaon next turn.
-						
-						
+
+
 						elseif calls == 9
 							alt_changePersona(mo, "pixie_alt")
-							if mo.name == "Re: Alt"
-								for k,v in pairs(mo.buffs) do
-									if v[1] < 0
-										return attackDefs["dekunda"], {mo}
-									end
-								end
-								return attackDefs["heat riser"], {mo}
-							end
 							return attackDefs["dekunda"], {mo}
-							
+
 						elseif calls == 10
-							if mo.name == "Re: Alt"
-								for i=1, #enemies do
-									local a = enemies[i]
-									for k, v in pairs(a.buffs) do
-										if v[1] > 0
-											return attackDefs["dekaja"], enemies
-										end
-									end
-								end
-								return attackDefs["heat riser"], {mo}
-							end
 							return attackDefs["dekaja"], enemies
-						
+
 						-- turn 5: Mind charge megidolaon
-						
+
 						elseif calls == 11
 							return attackDefs["mind charge"], {mo}
-							
+
 						elseif calls == 12
 							return attackDefs["megidolaon"], enemies
-						
+
 						-- turn 5+: random persona & attacks until 50% HP
-						
+
 						elseif calls > 12
-							
+
 							if (calls%2)
 								local personas = {"pixie_alt", "alice_alt", "kfrost_alt", "metatron_alt"}
 								alt_changePersona(mo, personas[P_RandomRange(1, #personas)])
-							end	
-							return newEnemyThinker(mo)						
+							end
+							return generalEnemyThinker(mo)
 						end
-					
+
 					-- MODE 2: condition bitch
 					/*
 						In this phase, harass the player with skills that can potential inflict statuses and follow up with skills
 						that can gain technical damage off of it, after opening with strong mind charged severe damaging spells
 					*/
-					
+
 					elseif mo.phase == 2
 
 						-- phase shift
 						if mo.hp < mo.maxhp/2	-- under 50% HP
-						and not (mo.mindcharge or mo.powercharge) //don't waste a mind charge haha
-							alt_changePersona(mo, "pixie_alt", true)
+						and btl.turnorder[2] ~= mo
+							alt_changePersona(mo, "pixie_alt")
 							mo.phase = 3
 							mo.thinkercalls = 2
-							if btl.turnorder[2] == mo
-								table.remove(btl.turnorder, 2)	-- remove self from turn order if phase shift overlaps, otherwise we'll screw everything over
+
+							if mo.buffs["atk"][1] <= 0
+							and mo.buffs["def"][1] <= 0
+							and mo.buffs["agi"][1] <= 0
+								return attackDefs["turntables"], btl.fighters
+							else
+								return attackDefs["heat riser"], {mo}
 							end
-							if mo.name == "Re: Alt"
-								//Make her even more powerful
-								mo.strength = 200 //$*115/100
-								mo.magic = 200 //$*115/100
-								mo.agility = 200 //$*115/100
-								mo.endurance = 200 //$*115/100
-								mo.luck = 200 //$*115/100
-								for i=1, #mo.enemies do
-									local a = mo.enemies[i]
-									for k, v in pairs(a.buffs) do
-										if v[1] > 0
-											return attackDefs["dekaja"], enemies
-										end
-									end
-								end
-							end
-							return attackDefs["heat riser"], {mo}
 						end
-						
+
 						-- Turn 1: Mind Chage -> Panta Rhei
 						if calls == 3
 							alt_changePersona(mo, "pixie_alt")
 							return attackDefs["mind charge"], {mo}
-						
+
 						elseif calls == 4
-							if mo.name == "Re: Alt" and unfortunate_victim.status_condition ~= COND_BURN
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition == COND_BURN //Muhahaha!
-										unfortunate_victim = j
-										break
-									end
-								end
-							end
-							if mo.name == "Re: Alt"
-							and unfortunate_victim.status_condition == COND_SUPER
-								return attackDefs["megidolaon"], enemies
-							end
 							return attackDefs["panta rhei"], {unfortunate_victim}
-							
+
 						-- Turn 2: Mabufudyne -> Vicious Strike
 						elseif calls == 5
-							if mo.name == "Re: Alt"
-								local check = 0
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition ~= COND_SUPER
-										check = j
-										break
-									end
-								end
-								if not check
-									return attackDefs["megidolaon"], enemies
-								end
-							end
 							alt_changePersona(mo, "kfrost_alt")
 							return attackDefs["mabufudyne"], enemies
-						
+
 						elseif calls == 6
 							alt_changePersona(mo, "metatron_alt")
-							if mo.name == "Re: Alt"
-								local check = 0
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition ~= COND_SUPER
-										check = j
-										break
-									end
-								end
-								if not check
-									return attackDefs["megidolaon"], enemies
-								end
-							end
 							return attackDefs["vicious strike"], enemies
-							
+
 						-- Turn 3: Metatron Mahama, Alice Mamudo... yikes!
 						elseif calls == 7
-							if mo.name ~= "Re: Alt"
-								return attackDefs["mahama"], enemies
-							else
-								local check = 0
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition ~= COND_SUPER
-										check = j
-										break
-									end
-								end
-								if not check
-									return attackDefs["megidolaon"], enemies
-								end
-								return attackDefs["mahamaon"], enemies
-							end
-							
+							return attackDefs["mahama"], enemies
+
 						elseif calls == 8
 							alt_changePersona(mo, "alice_alt")
-							if mo.name ~= "Re: Alt"
-								return attackDefs["mamudo"], enemies
-							else
-								local check = 0
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition ~= COND_SUPER
-										check = j
-										break
-									end
-								end
-								if not check
-									return attackDefs["megidolaon"], enemies
-								end
-								return attackDefs["mamudoon"], enemies
-							end
-						
+							return attackDefs["mamudo"], enemies
+
 						-- Turn 4: Mind Charge -> Thunder Reign
 						elseif calls == 9
 							alt_changePersona(mo, "pixie_alt")
 							return attackDefs["mind charge"], {mo}
-							
+
 						elseif calls == 10
-							if mo.name == "Re: Alt" and unfortunate_victim.status_condition ~= COND_DIZZY
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition == COND_DIZZY //Muhahaha!
-										unfortunate_victim = j
-										break
-									end
-								end
-							end
-							if mo.name == "Re: Alt"
-							and unfortunate_victim.status_condition == COND_SUPER
-								return attackDefs["megidolaon"], enemies
-							end
 							return attackDefs["thunder reign"], {unfortunate_victim}
-							
+
 						-- Turn 5: Maragidyne -> Magarudyne
 						elseif calls == 11
 							alt_changePersona(mo, "alice_alt")
-							if mo.name == "Re: Alt"
-								local check = 0
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition ~= COND_SUPER
-										check = j
-										break
-									end
-								end
-								if not check
-									return attackDefs["megidolaon"], enemies
-								end
-							end
 							return attackDefs["maragidyne"], enemies
-							
+
 						elseif calls == 12
 							alt_changePersona(mo, "pixie_alt")
-							if mo.name == "Re: Alt"
-								local check = 0
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition ~= COND_SUPER
-										check = j
-										break
-									end
-								end
-								if not check
-									return attackDefs["megidolaon"], enemies
-								end
-							end
 							return attackDefs["magarudyne"], enemies
-							
+
 						-- Turn 6: Mind Charge -> Niflheim
 						elseif calls == 13
 							alt_changePersona(mo, "pixie_alt")
 							return attackDefs["mind charge"], {mo}
-							
+
 						elseif calls == 14
-							if mo.name == "Re: Alt"
-							and unfortunate_victim.status_condition == COND_SUPER
-								return attackDefs["megidolaon"], enemies
-							end
 							alt_changePersona(mo, "kfrost_alt")
 							return attackDefs["niflheim"], {unfortunate_victim}
-							
+
 						-- Turn 7: Trisagion -> Panta Rhei'
 						elseif calls == 15
-							//Actually, this was just cruel
-							//Which is just what is needed
-							if mo.name == "Re: Alt" and unfortunate_victim.status_condition ~= COND_FREEZE
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition == COND_FREEZE //Muhahaha!
-										unfortunate_victim = j
-										break
-									end
-								end
-							end
 							alt_changePersona(mo, "alice_alt")
-							if mo.name == "Re: Alt"
-							and unfortunate_victim.status_condition == COND_SUPER
-								return attackDefs["megidolaon"], enemies
-							end
 							return attackDefs["trisagion"], {unfortunate_victim}
-							
+
 						elseif calls == 16
-							if mo.name == "Re: Alt" and unfortunate_victim.status_condition ~= COND_BURN
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition == COND_BURN //Muhahaha!
-										unfortunate_victim = j
-										break
-									end
-								end
-							end
 							alt_changePersona(mo, "pixie_alt")
-							if mo.name == "Re: Alt"
-							and unfortunate_victim.status_condition == COND_SUPER
-								return attackDefs["megidolaon"], enemies
-							end
 							return attackDefs["panta rhei"], {unfortunate_victim}
-							
+
 						-- Turn 8: Dekaja, Dekunda
 						elseif calls == 17
-							if mo.name == "Re: Alt"
-								for k,v in pairs(mo.buffs) do
-									if v[1] < 0
-										return attackDefs["dekunda"], {mo}
-									end
-								end
-								return attackDefs["heat riser"], {mo}
-							end
 							return attackDefs["dekunda"], {mo}
 						elseif calls == 18
-							if mo.name == "Re: Alt"
-								for i=1, #mo.enemies do
-									local a = mo.enemies[i]
-									for k, v in pairs(a.buffs) do
-										if v[1] > 0
-											return attackDefs["dekaja"], enemies
-										end
-									end
-								end
-								return attackDefs["heat riser"], {mo}
-							end
 							return attackDefs["dekaja"], enemies
-							
+
 						-- Turn 9: Mind Charge -> Megidolaon, and then repeat!
 						elseif calls == 19
 							return attackDefs["mind charge"], {mo}
 						elseif calls == 20
-							mo.thinkercalls = 2	-- repeat thinker
+							mo.thinkercalls = 3	-- repeat thinker
 							return attackDefs["megidolaon"], enemies
-							
+
 						end
-					
+
 					-- Final phase: be ungodly
 					elseif mo.phase == 3
 
-						
 						-- Turn 1: Virus Breath -> Blade of Fury
 						if calls == 3
-							alt_changePersona(mo, "alice_alt", true)
+							alt_changePersona(mo, "alice_alt")
 							return attackDefs["virus breath"], enemies
-							
+
 						elseif calls == 4
-							alt_changePersona(mo, "metatron_alt", true) //Pinch phase skills if she gets one mores
-							if mo.name == "Re: Alt"
-								local check = 0
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition ~= COND_SUPER
-										check = j
-										break
-									end
-								end
-								if not check
-									return attackDefs["megidolaon"], enemies
-								end
-							end
+							alt_changePersona(mo, "metatron_alt")
 							return attackDefs["blade of fury"], enemies
-						
+
 						-- Turn 2: Mahamaon, Mamudoon
 						elseif calls == 5
-							if mo.name == "Re: Alt"
-								local check = 0
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition ~= COND_SUPER
-										check = j
-										break
-									end
-								end
-								if not check
-									return attackDefs["megidolaon"], enemies
-								end
-							end
 							return attackDefs["mahamaon"], enemies
-							
+
 						elseif calls == 6
-							alt_changePersona(mo, "alice_alt", true)
-							if mo.name ~= "Re: Alt"
-								return attackDefs["mamudoon"], enemies
-							else
-								local check = 0
-								for i,j in ipairs(mo.enemies)
-									if j.status_condition ~= COND_SUPER
-										check = j
-										break
-									end
-								end
-								if not check
-									return attackDefs["megidolaon"], enemies
-								end
-								return attackDefs["die for me"], enemies	//The funny skill!
-							end
-							
+							alt_changePersona(mo, "alice_alt")
+							return attackDefs["mamudoon"], enemies
+
 						-- Turn 3+: Free wheeling. Change Personas every 2nd turn as usual
 						-- Continue the fight like this
 						elseif calls > 6
-							if (calls%2) or mo.name == "Re: Alt" //Change every thinkercall lol
+
+							if (calls%2)
 								local personas = {"pixie_alt", "alice_alt", "kfrost_alt", "metatron_alt"}
 								alt_changePersona(mo, personas[P_RandomRange(1, #personas)], true)	-- use pinch phase moves
 							end
-							if mo.name == "Re: Alt"
-								local attack, targets = newEnemyThinker(mo)
-								if (targets[1].status_condition ~= COND_SUPER)
-								or attack.type == ATK_ALMIGHTY or attack.type == ATK_SUPPORT or attack.type == ATK_HEAL
-									return attack, targets //Those three types of attacks are fine
-								else
-									local check = 0
-									for i,j in pairs(targets)
-										if j.status_condition ~= COND_SUPER
-											check = j
-										end
-									end
-									if check
-										return attack, targets
-									else
-										local megipersonas = {"pixie_alt", "alice_alt", "metatron_alt"}
-										if mo.persona == "kfrost_alt"
-											alt_changePersona(mo, megipersonas[P_RandomRange(1, #megipersonas)], true)
-										end
-										return attackDefs["megidolaon"], enemies
-									end
-								end
-							end
-							return newEnemyThinker(mo)
-						
-						end	
+							return generalEnemyThinker(mo)
+
+						end
 					end
-					
-					
-						
-					
-					
+
+
+
+
+
 					alt_changePersona(mo, "alice_alt")
-					return newEnemyThinker(mo)	--attackDefs["mamudoon"], enemies
+					return generalEnemyThinker(mo)	--attackDefs["mamudoon"], enemies
 				end
-
-
-local function B7_cutscenetriggers(btl)
-	
-	local ps = server.plentities[btl.n]
-	local en = ps[1].enemies[1]	-- yep, crude assumption!
-	
-	if en.enemy ~= "alt" return end
-	if server.P_DialogueStatus[btl.n].running return end
-	
-	if not en.deathanim	-- dead
-		D_startEvent(btl.n, "ev_b7_end")
-		
-	elseif en.hp < en.maxhp
-	and not en.cutstate
-		D_startEvent(btl.n, "ev_b7_opening")
-		en.cutstate = 1
-	
-	elseif en.cutstate == 1
-	and en.hp < en.maxhp*3/4
-		D_startEvent(btl.n, "ev_b7_75")
-		en.cutstate = 2
-		
-	elseif en.cutstate == 2
-	and en.hp < en.maxhp/2
-		D_startEvent(btl.n, "ev_b7_50")
-		en.cutstate = 3	
-
-	elseif en.cutstate == 3
-	and en.hp < en.maxhp/4
-		D_startEvent(btl.n, "ev_b7_25")
-		en.cutstate = 4	
-	end
-end	
-
-local function B7_cutscenetriggers_rematch(btl)
-	
-	local ps = server.plentities[btl.n]
-	local en = ps[1].enemies[1]	-- yep, crude assumption!
-	
-	if en.enemy ~= "alt" and en.enemy ~= "alt__roguemode" return end
-	if server.P_DialogueStatus[btl.n].running return end
-	
-	if not en.deathanim	-- dead
-		D_startEvent(btl.n, "ev_b7_end")
-		
-	elseif en.hp < en.maxhp
-	and not en.cutstate
-		D_startEvent(btl.n, "ev_b7_opening")
-		en.cutstate = 1
-	
-	elseif en.cutstate == 1
-	and en.hp < en.maxhp*3/4
-		D_startEvent(btl.n, "ev_b7_75")
-		en.cutstate = 2
-		
-	elseif en.cutstate == 2
-	and en.hp < en.maxhp/2
-		D_startEvent(btl.n, "ev_b7_50")
-		en.cutstate = 3	
-
-	elseif en.cutstate == 3
-	and en.hp < en.maxhp/4
-		D_startEvent(btl.n, "ev_b7_25")
-		en.cutstate = 4	
-
-	elseif en.cutstate and en.cutstate >= 2 and not en.allsuper
-		local count = 0
-		for k,v in ipairs(ps)
-			if v.status_condition == COND_SUPER
-				count = $+1
-			end
-		end
-		if count >= #ps
-			en.allsuper = 1
-			D_startEvent(btl.n, "ev_b7_allsuper")
-		end
-	end
-end	
-
-local function hud_front(v, evt)
-
-	local t = evt.eventindex
-	
-	if t == 18
-		
-		local tflag = 0
-		if evt.animtimer
-			tflag = max(0, 9 - (evt.animtimer/4))<<V_ALPHASHIFT
-		end	
-		if tflag < V_10TRANS
-		or tflag > V_90TRANS
-			tflag = 0
-		end
-
-		drawScreenwidePatch(v, v.cachePatch("H_RIP4"), nil, tflag)
-	end
-end
-
-//This event bugs out if you died to the AOA lol
-/*eventList["ev_b7_all_out"] = { //Good luck seeing this event lmao
-		[1] = {"text", "Alt", "I did say I'd be going all out!", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-}*/
-
-//I'm bad at writing character dialogue, I mostly left it the same as the original lol
-//Actually, I should just make it the same as the original, but with one or two lines about how similar it is lol
-/*eventList["ev_b7_end_rematch"] = {
-
-		["hud_front"] = hud_front,
-
-		[1] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		[2] = {"text", "Alt", "I lost...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		
-		[3] = {"function", function(evt, btl)
-
-								local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-								ANIM_set(t, t.anim_special1, true)
-								return true
-							end},
-		
-		[4] = {"text", "Alt", "Well, I suppose that's what I get for being such a slacker!", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-
-		[5] = {"function", function(evt, btl)
-
-								local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-								ANIM_set(t, t.anim_stand, true)
-								evt.animtimer = nil
-								return true
-							end},
-		
-		[6] = {"text", "Alt", "As for you lot...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		[7] = {"text", "Alt", "You have incredible strength, I'm sure you'll be able to overcome anything.", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		[8] = {"text", "Alt", "Though it doesn't mean you get to be as lazy as I am from now on.", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-		[9] = {"text", "Alt", "Someday, you might just find yourselves facing an even greater power... ", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		[10] = {"text", "Alt", "So don't stop honing your skills!", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		[11] = {"text", "Alt", "(Hm, deja vu?)", nil, nil, nil, {"H_ALT05", SKINCOLOR_BLUE}},
-		[12] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		[13] = {"text", "Alt", "Now then.", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		[14] = {"text", "Alt", "I've worked up quite an appetite with all that fighting...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		[15] = {"text", "Alt", "Remember the deal? 2 million cookies. Give em to me!", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-		[16] = {"text", "Alt", "What do you mean the deal was 1 million cookies if you lost?", nil, nil, nil, {"H_ALT05", SKINCOLOR_BLUE}},
-		[17] = {"text", "Alt", "I kid, I kid...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		[18] = {"text", "Alt", "Let's just leave this dumpster already. I'm hungry.", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		
-		
-		[19] = {"function", function(evt, btl)
-								
-								local t = server.plentities[btl.n][1].enemies[1]
-								
-								evt.animtimer = $ and $+1 or 1
-								if evt.animtimer == TICRATE
-									-- lol hack
-									btl.battlestate = BS_MPFINISH
-									btl.hudtimer.mpfinish = 1
-									t.hp = 0
-									t.fuse = 2
-									
-									return true
-								end
-							end},
-		
-}*/
-
-eventList["ev_b7_allsuper"] = {
-	[1] = {"text", "Alt", "Oops! All super?", nil, nil, nil, {"H_ALT05", SKINCOLOR_BLUE}},
-	[2] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	[3] = {"text", "Alt", "Oops! All Megidolaon!", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-}
-
-eventList["ev_b7_start_rematch"] = {
-		
-	[1] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1
-							if evt.animtimer == 1
-								for p in players.iterate do
-									if p and p.valid and p.control and p.control.valid and p.control.battlen == btl.n
-										S_FadeOutStopMusic(250, p)
-									end	
-								end
-								
-								local destx = cam.x - 128*cos(cam.angle)
-								local desty = cam.y - 128*sin(cam.angle)
-								CAM_goto(cam, destx, desty, cam.z + FRACUNIT*32)
-								
-							end
-							
-							
-							
-							if evt.animtimer >= 20
-							and evt.animtimer <= 60
-							and evt.animtimer % 3 == 0
-
-
-								local s = P_SpawnMobj(t.x + P_RandomRange(-128, 128)<<FRACBITS, t.y + P_RandomRange(-128, 128)<<FRACBITS, t.z + P_RandomRange(0, 192)<<FRACBITS, MT_DUMMY)
-								s.color = SKINCOLOR_WHITE
-								s.state = S_MEGISTAR1
-								s.scale = $*2 + P_RandomRange(0, 65535)
-								playSound(t.battlen, sfx_hamas1)
-							end
-							
-							if evt.animtimer == 60
-								evt.animtimer = nil
-								return true
-							end	
-						end},
-
-	[2] = {"text", "Alt", "Still lame...", nil, nil, nil, {"H_ALT04", SKINCOLOR_BLUE}},	
-
-	[3] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1
-							
-							if evt.animtimer == TICRATE/2
-							
-								-- !?
-								local excl = P_SpawnMobj(t.x, t.y, t.z+90*FRACUNIT, MT_DUMMY)
-								excl.flags = MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_NOBLOCKMAP
-								excl.scale = 1
-								excl.destscale = FRACUNIT*2
-								excl.scalespeed = FRACUNIT/2
-								excl.sprite = SPR_XCLA
-								excl.frame = A|FF_FULLBRIGHT
-								excl.fuse = 20
-								excl.momx = P_RandomRange(-3, 3)*FRACUNIT
-								excl.momy = P_RandomRange(-3, 3)*FRACUNIT
-								
-								t.passiveskills = {}	-- remove inf endure
-								
-								playSound(t.battlen, sfx_megi6)
-								local an = 0
-								for i = 1, 32
-
-									local s = P_SpawnMobj(t.x, t.y, t.z + FRACUNIT*32, MT_DUMMY)
-									s.color = SKINCOLOR_WHITE
-									s.state = S_MEGITHOK
-									s.scale = $/2
-									s.fuse = TICRATE*2
-									P_InstaThrust(s, an*ANG1, 50<<FRACBITS)
-
-									s = P_SpawnMobj(t.x, t.y, t.z + FRACUNIT*32, MT_DUMMY)
-									s.color = SKINCOLOR_WHITE
-									s.state = S_MEGITHOK
-									s.scale = $/4
-									s.fuse = TICRATE*2
-									P_InstaThrust(s, an*ANG1, 30<<FRACBITS)
-
-									an = $ + (360/32)
-								end
-
-								local ne = BTL_spawnEnemy(t, ROGUE_initEnemyStats("alt"), false, t.x, t.y, t.z) //I want to make her stronger lol
-								ne.name = "Re: Alt"
-								ne.flags = $|MF_NOGRAVITY
-								ANIM_set(ne, ne.anim_special1, true)
-								
-								ne.z = ne.floorz + 2048*FRACUNIT
-								
-								damageObject(t, 9999)
-								
-							end
-							
-							if evt.animtimer == 100
-								return true
-							end	
-						end},
-	
-	
-	[4] = {"text", "Alt", "Man, that clown's still the strongest thing this place has?", nil, nil, nil, {"H_ALT04", SKINCOLOR_BLUE}},
-	[5] = {"text", "Alt", "That sucks.", nil, nil, nil, {"H_ALT04", SKINCOLOR_BLUE}},
-	
-	[6] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[2]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1	
-							
-							if evt.animtimer >= TICRATE/2
-								t.momz = -(t.z - t.floorz)/4
-							end
-							
-							if evt.animtimer == TICRATE*6
-								evt.animtimer = nil
-								t.flags = $ & ~MF_NOGRAVITY
-								return true
-							end
-						end},
-
-	[7] = {"text", "Alt", "We can't have things end this way now can we?", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	[8] = {"text", "Alt", "I had the cookies ready to watch you lot have a nice fight, but it got boring instantly!", nil, nil, nil, {"H_ALT04", SKINCOLOR_BLUE}},
-	[9] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	[10] = {"text", "Alt", "Long story short...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-	[11] = {"text", "Alt", "Try not to bore me as much as that clown I just erased.", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-	
-	[12] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[2]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1	
-							
-							if evt.animtimer == TICRATE/2
-								ANIM_set(t, t.anim_stand, true)
-								evt.animtimer = nil
-								
-								btl.turnorder = {}
-								BTL_fullCleanse(btl)
-								btl.func = B7_cutscenetriggers_rematch
-								
-								for p in players.iterate do
-									if p and p.control and p.control.valid and p.control.battlen == btl.n
-										S_ChangeMusic("CTWR", true, p)
-									end	
-								end	
-								
-								return true
-							end
-							
-						end},		
-	
-}
-
-//lol I want Alt to notice if you've defeated the reaper in the current server
-eventList["ev_b7_start_reaperdefeated"] = {
-		
-	[1] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1
-							if evt.animtimer == 1
-								for p in players.iterate do
-									if p and p.valid and p.control and p.control.valid and p.control.battlen == btl.n
-										S_FadeOutStopMusic(250, p)
-									end	
-								end
-								
-								local destx = cam.x - 128*cos(cam.angle)
-								local desty = cam.y - 128*sin(cam.angle)
-								CAM_goto(cam, destx, desty, cam.z + FRACUNIT*32)
-								
-							end
-							
-							
-							
-							if evt.animtimer >= 20
-							and evt.animtimer <= 60
-							and evt.animtimer % 3 == 0
-
-
-								local s = P_SpawnMobj(t.x + P_RandomRange(-128, 128)<<FRACBITS, t.y + P_RandomRange(-128, 128)<<FRACBITS, t.z + P_RandomRange(0, 192)<<FRACBITS, MT_DUMMY)
-								s.color = SKINCOLOR_WHITE
-								s.state = S_MEGISTAR1
-								s.scale = $*2 + P_RandomRange(0, 65535)
-								playSound(t.battlen, sfx_hamas1)
-							end
-							
-							if evt.animtimer == 60
-								evt.animtimer = nil
-								return true
-							end	
-						end},
-
-	[2] = {"text", "???", "Lame..."},	
-
-	[3] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1
-							
-							if evt.animtimer == TICRATE/2
-							
-								-- !?
-								local excl = P_SpawnMobj(t.x, t.y, t.z+90*FRACUNIT, MT_DUMMY)
-								excl.flags = MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_NOBLOCKMAP
-								excl.scale = 1
-								excl.destscale = FRACUNIT*2
-								excl.scalespeed = FRACUNIT/2
-								excl.sprite = SPR_XCLA
-								excl.frame = A|FF_FULLBRIGHT
-								excl.fuse = 20
-								excl.momx = P_RandomRange(-3, 3)*FRACUNIT
-								excl.momy = P_RandomRange(-3, 3)*FRACUNIT
-								
-								t.passiveskills = {}	-- remove inf endure
-								
-								playSound(t.battlen, sfx_megi6)
-								local an = 0
-								for i = 1, 32
-
-									local s = P_SpawnMobj(t.x, t.y, t.z + FRACUNIT*32, MT_DUMMY)
-									s.color = SKINCOLOR_WHITE
-									s.state = S_MEGITHOK
-									s.scale = $/2
-									s.fuse = TICRATE*2
-									P_InstaThrust(s, an*ANG1, 50<<FRACBITS)
-
-									s = P_SpawnMobj(t.x, t.y, t.z + FRACUNIT*32, MT_DUMMY)
-									s.color = SKINCOLOR_WHITE
-									s.state = S_MEGITHOK
-									s.scale = $/4
-									s.fuse = TICRATE*2
-									P_InstaThrust(s, an*ANG1, 30<<FRACBITS)
-
-									an = $ + (360/32)
-								end
-
-								local ne = BTL_spawnEnemy(t, "alt", false, t.x, t.y, t.z)
-								ne.flags = $|MF_NOGRAVITY
-								ANIM_set(ne, ne.anim_special1, true)
-								
-								ne.z = ne.floorz + 2048*FRACUNIT
-								
-								damageObject(t, 9999)
-								
-							end
-							
-							if evt.animtimer == 100
-								return true
-							end	
-						end},
-	
-	
-	[4] = {"text", "???", "Man, you made it all the way down there and this is the strongest thing this place has?"},
-	[5] = {"text", "???", "Didn't you already beat it before?"},
-	[6] = {"text", "???", "That sucks."},
-	
-	[7] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[2]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1	
-							
-							if evt.animtimer >= TICRATE/2
-								t.momz = -(t.z - t.floorz)/4
-							end
-							
-							if evt.animtimer == TICRATE*6
-								evt.animtimer = nil
-								t.flags = $ & ~MF_NOGRAVITY
-								return true
-							end
-						end},
-
-	[8] = {"text", "Alt", "We can't have things end this way now can we?", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	[9] = {"text", "Alt", "I had the cookies ready to watch you lot have a nice fight, but it got boring instantly!", nil, nil, nil, {"H_ALT04", SKINCOLOR_BLUE}},
-	[10] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	[11] = {"text", "Alt", "Long story short...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-	[12] = {"text", "Alt", "Try not to bore me as much as that clown I just erased.", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-	
-	[13] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[2]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1	
-							
-							if evt.animtimer == TICRATE/2
-								ANIM_set(t, t.anim_stand, true)
-								evt.animtimer = nil
-								
-								btl.turnorder = {}
-								BTL_fullCleanse(btl)
-								btl.func = B7_cutscenetriggers
-								
-								for p in players.iterate do
-									if p and p.control and p.control.valid and p.control.battlen == btl.n
-										S_ChangeMusic("CTWR", true, p)
-									end	
-								end	
-								
-								return true
-							end
-							
-						end},		
-	
-}
-
-//I don't like this enough to use it, but I don't dislike it enough to completely delete it
-/*eventList["ev_b7_opening_rematch"] = {
-	[1] = {"text", "Alt", "You may have beaten me before, but this will be different if you underestimate me.", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-}
-
-eventList["ev_b7_75_rematch"] = {
-	[1] = {"text", "Alt", "You've gotten stronger too, I see?", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-	[2] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-							local cam = btl.cam
-							ANIM_set(t, t.anim_special1)
-							return true
-							
-			end},				
-	[3] = {"text", "Alt", "I suppose that just means I can still go all out myself!", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-}
-
-eventList["ev_b7_50_rematch"] = {
-	[1] = {"text", "Alt", "Alright, I'm interested...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-	[2] = {"text", "Alt", "Very well, show me...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	[3] = {"text", "Alt", "Show me how powerful you've become!", nil, nil, nil, {"H_ALT06", SKINCOLOR_BLUE}},
-}
-
-eventList["ev_b7_25_rematch"] = {
-	[1] = {"text", "Alt", "Haha, man... \nDid I not get strong enough?", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	//[2] = {"text", "Alt", "And I was gonna force you to buy me 4 million cookies this time...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-}*/
-
-/*eventList["ev_b7_end"] = {
-
-		["hud_front"] = hud_front,
-
-		[1] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		[2] = {"text", "Alt", "I lost...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		
-		[3] = {"function", function(evt, btl)
-
-								local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-								ANIM_set(t, t.anim_special1, true)
-								return true
-							end},
-		
-		[4] = {"text", "Alt", "Well, I suppose that's what I get for being such a slacker!", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-
-		[5] = {"function", function(evt, btl)
-
-								local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-								ANIM_set(t, t.anim_stand, true)
-								evt.animtimer = nil
-								return true
-							end},
-		
-		[6] = {"text", "Alt", "As for you lot...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		[7] = {"text", "Alt", "You have incredible strength, I'm sure you'll be able to overcome anything.", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		[8] = {"text", "Alt", "Though it doesn't mean you get to be as lazy as I am from now on.", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-		[9] = {"text", "Alt", "Someday, you might just find yourselves facing an even greater power... ", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		[10] = {"text", "Alt", "So don't stop honing your skills!", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		[11] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		[12] = {"text", "Alt", "Now then.", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		[13] = {"text", "Alt", "I've worked up quite an appetite with all that fighting...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		[14] = {"text", "Alt", "Remember the deal? 2 million cookies. Give em to me!", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-		[15] = {"text", "Alt", "What do you mean the deal was 1 million cookies if you lost?", nil, nil, nil, {"H_ALT05", SKINCOLOR_BLUE}},
-		[16] = {"text", "Alt", "I kid, I kid...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-		[17] = {"text", "Alt", "Let's just leave this dumpster already. I'm hungry.", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-		[18] = {"text", "Spectrum", "Congrats, you beat Alt!\nTurn monadrematch on in the console next time for a stronger Alt rematch.", nil, nil, nil, {"H_TALAOA", SKINCOLOR_CRIMSON}},
-		
-		[19] = {"function", function(evt, btl)
-								
-								local t = server.plentities[btl.n][1].enemies[1]
-								
-								evt.animtimer = $ and $+1 or 1
-								if evt.animtimer == TICRATE
-									-- lol hack
-									btl.battlestate = BS_MPFINISH
-									btl.hudtimer.mpfinish = 1
-									t.hp = 0
-									t.fuse = 2
-									
-									return true
-								end
-							end},
-		
-}*/
-
-/*eventList["ev_b7_start_nicetry"] = {
-		
-	[1] = {"text", "Spectrum", "Nice try, but you have to beat Monad normally first to unlock monadrematch now, so on with the normal boss!", nil, nil, nil, {"H_TALAOA", SKINCOLOR_CRIMSON}},
-	[2] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1
-							if evt.animtimer == 1
-								for p in players.iterate do
-									if p and p.valid and p.control and p.control.valid and p.control.battlen == btl.n
-										S_FadeOutStopMusic(250, p)
-									end	
-								end
-								
-								local destx = cam.x - 128*cos(cam.angle)
-								local desty = cam.y - 128*sin(cam.angle)
-								CAM_goto(cam, destx, desty, cam.z + FRACUNIT*32)
-								
-							end
-							
-							
-							
-							if evt.animtimer >= 20
-							and evt.animtimer <= 60
-							and evt.animtimer % 3 == 0
-
-
-								local s = P_SpawnMobj(t.x + P_RandomRange(-128, 128)<<FRACBITS, t.y + P_RandomRange(-128, 128)<<FRACBITS, t.z + P_RandomRange(0, 192)<<FRACBITS, MT_DUMMY)
-								s.color = SKINCOLOR_WHITE
-								s.state = S_MEGISTAR1
-								s.scale = $*2 + P_RandomRange(0, 65535)
-								playSound(t.battlen, sfx_hamas1)
-							end
-							
-							if evt.animtimer == 60
-								evt.animtimer = nil
-								return true
-							end	
-						end},
-
-	[3] = {"text", "???", "Lame..."},	
-
-	[4] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[1]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1
-							
-							if evt.animtimer == TICRATE/2
-							
-								-- !?
-								local excl = P_SpawnMobj(t.x, t.y, t.z+90*FRACUNIT, MT_DUMMY)
-								excl.flags = MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_NOBLOCKMAP
-								excl.scale = 1
-								excl.destscale = FRACUNIT*2
-								excl.scalespeed = FRACUNIT/2
-								excl.sprite = SPR_XCLA
-								excl.frame = A|FF_FULLBRIGHT
-								excl.fuse = 20
-								excl.momx = P_RandomRange(-3, 3)*FRACUNIT
-								excl.momy = P_RandomRange(-3, 3)*FRACUNIT
-								
-								t.passiveskills = {}	-- remove inf endure
-								
-								playSound(t.battlen, sfx_megi6)
-								local an = 0
-								for i = 1, 32
-
-									local s = P_SpawnMobj(t.x, t.y, t.z + FRACUNIT*32, MT_DUMMY)
-									s.color = SKINCOLOR_WHITE
-									s.state = S_MEGITHOK
-									s.scale = $/2
-									s.fuse = TICRATE*2
-									P_InstaThrust(s, an*ANG1, 50<<FRACBITS)
-
-									s = P_SpawnMobj(t.x, t.y, t.z + FRACUNIT*32, MT_DUMMY)
-									s.color = SKINCOLOR_WHITE
-									s.state = S_MEGITHOK
-									s.scale = $/4
-									s.fuse = TICRATE*2
-									P_InstaThrust(s, an*ANG1, 30<<FRACBITS)
-
-									an = $ + (360/32)
-								end
-
-								local ne = BTL_spawnEnemy(t, "alt", false, t.x, t.y, t.z)
-								ne.flags = $|MF_NOGRAVITY
-								ANIM_set(ne, ne.anim_special1, true)
-								
-								ne.z = ne.floorz + 2048*FRACUNIT
-								
-								damageObject(t, 9999)
-								
-							end
-							
-							if evt.animtimer == 100
-								return true
-							end	
-						end},
-	
-	
-	[5] = {"text", "???", "Man, you made it all the way down there and this is the strongest thing this place has?"},	
-	[6] = {"text", "???", "That sucks."},
-	
-	[7] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[2]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1	
-							
-							if evt.animtimer >= TICRATE/2
-								t.momz = -(t.z - t.floorz)/4
-							end
-							
-							if evt.animtimer == TICRATE*6
-								evt.animtimer = nil
-								t.flags = $ & ~MF_NOGRAVITY
-								return true
-							end
-						end},
-
-	[8] = {"text", "Alt", "We can't have things end this way now can we?", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	[9] = {"text", "Alt", "I had the cookies ready to watch you lot have a nice fight, but it got boring instantly!", nil, nil, nil, {"H_ALT04", SKINCOLOR_BLUE}},
-	[10] = {"text", "Alt", "...", nil, nil, nil, {"H_ALT03", SKINCOLOR_BLUE}},
-	[11] = {"text", "Alt", "Long story short...", nil, nil, nil, {"H_ALT01", SKINCOLOR_BLUE}},
-	[12] = {"text", "Alt", "Try not to bore me as much as that clown I just erased.", nil, nil, nil, {"H_ALT02", SKINCOLOR_BLUE}},
-	
-	[13] = {"function", 	function(evt, btl)
-							
-							local t = server.plentities[btl.n][1].enemies[2]	-- hacky, but works....
-							local cam = btl.cam
-							
-							evt.animtimer = $ and $+1 or 1	
-							
-							if evt.animtimer == TICRATE/2
-								ANIM_set(t, t.anim_stand, true)
-								evt.animtimer = nil
-								
-								btl.turnorder = {}
-								BTL_fullCleanse(btl)
-								btl.func = B7_cutscenetriggers
-								
-								for p in players.iterate do
-									if p and p.control and p.control.valid and p.control.battlen == btl.n
-										S_ChangeMusic("CTWR", true, p)
-									end	
-								end	
-								
-								return true
-							end
-							
-						end},		
-	
-}*/

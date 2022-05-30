@@ -125,7 +125,7 @@ rawset(_G, "playerenemythinker", function(mo)
 			return knockdownskill, enemies
 		end
 	end
-	return newEnemyThinker(mo)
+	return generalEnemyThinker(mo)
 end)
 
 enemyList["player_enemy"] = {

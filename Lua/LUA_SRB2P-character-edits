@@ -1,32 +1,13 @@
 if not srb2p return end
 
-//Actually, I shouldn't mess with characters' stats, they're fine how they are (and this messes with R.E.D.'s upgrades)
-//Decided to make everyone's basehp+basesp 95
-/*charStats["blaze"].basesp = 40
-charStats["metalsonic"].basesp = 25
-charStats["knuckles"].basesp = 25
-charStats["kanade"].basehp = 75
-
-//Decided to make everyone's BST 39
-personaList["polydeuces"].agility = 8
-personaList["none_kanade"].magic = 4*/
-
-charStats["kanade"].anim_special5 = $ or {SPR_PLAY, A, TICRATE, "SPR2_HWLP"} //sepcial moment
-personaList["omoikane"].skills[14][3] = $ or "psy boost"
 table.insert(personaList["polydeuces"].skills, {"thunder reign", 92, "ziodyne"})
 table.insert(personaList["palladion"].skills, {"atomic flare", 96, "freidyne"})
 table.insert(personaList["samael"].skills, {"eggion", 88, "eigaon"})
 table.insert(personaList["io"].skills, {"megagarula", 93, "magarudyne"})
 
-local function kanadeanimfix(mo)
-	charStats["kanade"].anim_special5 = $ or {SPR_PLAY, A, TICRATE, "SPR2_HWLP"} //sepcial moment
-end
-
-addHook("ThinkFrame", kanadeanimfix)
-
 
 -- function to sort attacks
-rawset(_G, "attackSortFunc", function(a, b)
+attackSortFunc = function(a, b)
 									local t = attackDefs
 									//check if both a and b are valid skills first (even though that won't happen with this Lua added??)
 									if not (t[a] and t[b])
@@ -90,9 +71,9 @@ rawset(_G, "attackSortFunc", function(a, b)
 									else
 										return a < b
 									end
-end)
+end
 
-rawset(_G, "PLYR_initSkills", function(mo, persona)
+PLYR_initSkills = function(mo, persona)
 	--dprint("Generating Player entity skills...")
 	mo.skills = {}
 	if server.gamemode == GM_VOIDRUN
@@ -100,7 +81,10 @@ rawset(_G, "PLYR_initSkills", function(mo, persona)
 	end
 
 	for k,v in ipairs(persona.skills or {})
-		if v and attackDefs[v[1]] //for invalid skills
+		if v
+			if not attackDefs[v[1]]
+				print("Skill "..v[1].." is an invalid skill.")
+			end
 
 			if mo.level >= v[2]
 				-- but do we have the skill we need to remove, first?
@@ -112,6 +96,7 @@ rawset(_G, "PLYR_initSkills", function(mo, persona)
 				end
 				-- add skill //(and remove a skill if not doing so would result in 9 skills)
 				if #mo.skills == 8
+					mo.toomanyskills = 1
 					for i=1,8
 						if attackDefs[mo.skills[i]].type == attackDefs[v[1]].type //Look for a similar skill
 						and attackDefs[mo.skills[i]].costtype == attackDefs[v[1]].costtype
@@ -129,6 +114,11 @@ rawset(_G, "PLYR_initSkills", function(mo, persona)
 		end
 	end
 
+	if mo.toomanyskills and mo.skin
+		print("Over 8 skills detected on "..mo.skin..", removing older skills.")
+		mo.toomanyskills = nil
+	end
+
 	-- autosort skills
 	table.sort(mo.skills, attackSortFunc)
-end)
+end
